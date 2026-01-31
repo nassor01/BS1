@@ -1,8 +1,8 @@
 import React from 'react';
-import { LogOut, Building2 } from 'lucide-react';
+import { LogOut, Building2, Menu, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const Navbar = () => {
+const Navbar = ({ onMenuClick }) => {
     const navigate = useNavigate();
 
     const handleLogout = () => {
@@ -10,10 +10,17 @@ const Navbar = () => {
     };
 
     return (
-        <nav className="bg-white border-b border-gray-200">
+        <nav className="bg-white border-b border-gray-200 sticky top-0 z-30">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between h-16">
                     <div className="flex items-center">
+                        <button
+                            onClick={onMenuClick}
+                            className="p-2 -ml-2 mr-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none"
+                        >
+                            <Menu className="w-6 h-6" />
+                        </button>
+
                         <div className="flex-shrink-0 flex items-center">
                             <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
                                 <Building2 className="text-white w-6 h-6" />

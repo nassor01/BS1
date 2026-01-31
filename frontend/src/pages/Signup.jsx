@@ -32,7 +32,7 @@ const Signup = () => {
                         <Building2 className="text-white w-8 h-8" />
                     </div>
                     <h1 className="text-2xl font-bold text-gray-900">Create an Account</h1>
-                    <p className="text-gray-500 mt-2">Sign up to start booking rooms in your department</p>
+                    <p className="text-gray-500 mt-2">Sign up to book rooms at Swahilipot</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
