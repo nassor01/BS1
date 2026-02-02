@@ -15,12 +15,12 @@ const Dashboard = () => {
 
     useEffect(() => {
         const defaultRooms = [
-            { id: 1, name: 'Conference Room A', floor: 'Floor 1', capacity: 10, amenities: ['Projector', 'Whiteboard', 'Video Conference'], status: 'Available' },
-            { id: 2, name: 'Meeting Room B', floor: 'Floor 1', capacity: 6, amenities: ['Whiteboard', 'TV Display'], status: 'Available' },
-            { id: 3, name: 'Boardroom', floor: 'Floor 2', capacity: 12, amenities: ['Projector', 'Video Conference', 'AC'], status: 'Available' },
-            { id: 4, name: 'Focus Room 1', floor: 'Floor 2', capacity: 2, amenities: ['Whiteboard'], status: 'Available' },
-            { id: 5, name: 'Training Hall', floor: 'Ground Floor', capacity: 50, amenities: ['Sound System', 'Projector'], status: 'Reserved' },
-            { id: 6, name: 'Podcast Studio', floor: 'Floor 3', capacity: 4, amenities: ['Soundproofing', 'Mics'], status: 'Booked' }
+            { id: 1, name: 'Conference Room A', space: 'Floor 1', capacity: 10, amenities: ['Projector', 'Whiteboard', 'Video Conference'], status: 'Available' },
+            { id: 2, name: 'Meeting Room B', space: 'Floor 1', capacity: 6, amenities: ['Whiteboard', 'TV Display'], status: 'Available' },
+            { id: 3, name: 'Boardroom', space: 'Floor 2', capacity: 12, amenities: ['Projector', 'Video Conference', 'AC'], status: 'Available' },
+            { id: 4, name: 'Focus Room 1', space: 'Floor 2', capacity: 2, amenities: ['Whiteboard'], status: 'Available' },
+            { id: 5, name: 'Training Hall', space: 'Ground Floor', capacity: 50, amenities: ['Sound System', 'Projector'], status: 'Reserved' },
+            { id: 6, name: 'Podcast Studio', space: 'Floor 3', capacity: 4, amenities: ['Soundproofing', 'Mics'], status: 'Booked' }
         ];
 
         try {
@@ -128,7 +128,7 @@ const Dashboard = () => {
                                 <div className="flex justify-between items-start mb-4">
                                     <div>
                                         <h3 className="text-lg font-bold text-gray-900">{room.name}</h3>
-                                        <p className="text-sm text-gray-500">{room.floor}</p>
+                                        <p className="text-sm text-gray-500">{room.space}</p>
                                     </div>
                                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${room.status === 'Available' ? 'bg-green-100 text-green-800' :
                                         room.status === 'Reserved' ? 'bg-yellow-100 text-yellow-800' :

@@ -19,10 +19,10 @@ const AdminDashboard = () => {
         }
 
         const defaultRooms = [
-            { id: 1, name: 'Conference Room A', floor: 'Floor 1', capacity: 10, amenities: ['Projector', 'Whiteboard'], status: 'Available' },
-            { id: 2, name: 'Meeting Room B', floor: 'Floor 1', capacity: 6, amenities: ['Whiteboard'], status: 'Available' },
-            { id: 3, name: 'Boardroom', floor: 'Floor 2', capacity: 12, amenities: ['Projector', 'Video Conference'], status: 'Available' },
-            { id: 4, name: 'Focus Room 1', floor: 'Floor 2', capacity: 2, amenities: ['Whiteboard'], status: 'Available' },
+            { id: 1, name: 'Conference Room A', space: 'Floor 1', capacity: 10, amenities: ['Projector', 'Whiteboard'], status: 'Available' },
+            { id: 2, name: 'Meeting Room B', space: 'Floor 1', capacity: 6, amenities: ['Whiteboard'], status: 'Available' },
+            { id: 3, name: 'Boardroom', space: 'Floor 2', capacity: 12, amenities: ['Projector', 'Video Conference'], status: 'Available' },
+            { id: 4, name: 'Focus Room 1', space: 'Floor 2', capacity: 2, amenities: ['Whiteboard'], status: 'Available' },
         ];
 
         try {

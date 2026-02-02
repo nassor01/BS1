@@ -4,7 +4,7 @@ import { X, Building2, Users, Layers, Star } from 'lucide-react';
 const AddRoomModal = ({ isOpen, onClose, onAdd }) => {
     const [roomData, setRoomData] = useState({
         name: '',
-        floor: '',
+        space: '',
         capacity: '',
         amenities: '',
     });
@@ -16,14 +16,14 @@ const AddRoomModal = ({ isOpen, onClose, onAdd }) => {
         const newRoom = {
             id: Date.now(),
             name: roomData.name,
-            floor: roomData.floor,
+            space: roomData.space,
             capacity: parseInt(roomData.capacity),
             amenities: roomData.amenities.split(',').map(a => a.trim()).filter(a => a !== ''),
             status: 'Available',
             type: 'available'
         };
         onAdd(newRoom);
-        setRoomData({ name: '', floor: '', capacity: '', amenities: '' });
+        setRoomData({ name: '', space: '', capacity: '', amenities: '' });
         onClose();
     };
 
@@ -54,16 +54,16 @@ const AddRoomModal = ({ isOpen, onClose, onAdd }) => {
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
-                            <label className="text-sm font-medium text-gray-700">Floor</label>
+                            <label className="text-sm font-medium text-gray-700">Space</label>
                             <div className="relative">
                                 <Layers className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                 <input
                                     type="text"
                                     required
-                                    value={roomData.floor}
-                                    onChange={e => setRoomData({ ...roomData, floor: e.target.value })}
+                                    value={roomData.space}
+                                    onChange={e => setRoomData({ ...roomData, space: e.target.value })}
                                     className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                                    placeholder="Floor 2"
+                                    placeholder="Ground Floor"
                                 />
                             </div>
                         </div>
