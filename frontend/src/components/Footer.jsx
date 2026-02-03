@@ -13,19 +13,19 @@ const Footer = () => {
                             Empowering youth through technology, arts, and entrepreneurship across East Africa.
                         </p>
                         <div className="flex space-x-4">
-                            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 transition-colors">
+                            <a href="https://www.facebook.com/SwahiliPotHub" target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 transition-colors">
                                 <Facebook className="w-5 h-5" />
                             </a>
-                            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 transition-colors">
+                            <a href="https://twitter.com/SwahiliPotHub" target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 transition-colors">
                                 <Twitter className="w-5 h-5" />
                             </a>
-                            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 transition-colors">
+                            <a href="https://www.instagram.com/swahilipothub" target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 transition-colors">
                                 <Instagram className="w-5 h-5" />
                             </a>
-                            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 transition-colors">
+                            <a href="https://www.linkedin.com/company/swahilipot-hub-foundation" target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 transition-colors">
                                 <Linkedin className="w-5 h-5" />
                             </a>
-                            <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 transition-colors">
+                            <a href="https://www.youtube.com/@SwahiliPotHub" target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 transition-colors">
                                 <Youtube className="w-5 h-5" />
                             </a>
                         </div>
