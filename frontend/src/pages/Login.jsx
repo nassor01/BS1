@@ -23,7 +23,7 @@ const Login = () => {
         setError('');
 
         try {
-            const response = await fetch('http://localhost:3000/login', {
+            const response = await fetch('http://127.0.0.1:3000/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -50,7 +50,7 @@ const Login = () => {
 
                 // Redirect based on role
                 if (data.user.role === 'admin') {
-                    navigate('/admin-dashboard');
+                    navigate('/admin/dashboard');
                 } else {
                     navigate('/dashboard');
                 }

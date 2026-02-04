@@ -42,6 +42,7 @@ const BookingModal = ({ isOpen, onClose, room, type }) => {
                     date: formData.date,
                     startTime: formData.startTime.replace(' AM', ':00').replace(' PM', ':00'), // Simple conversion for backend
                     endTime: formData.endTime.replace(' AM', ':00').replace(' PM', ':00'),
+                    type: type // 'booking' or 'reservation'
                 }),
             });
 

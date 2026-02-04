@@ -3,6 +3,7 @@ const express = require('express');
 const mysql = require('mysql2');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
+const nodeCron = require('node-cron');
 const sendMail = require('./mailer');
 
 const app = express();
@@ -10,7 +11,12 @@ const app = express();
 // Middleware
 app.use(express.json());
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: [
+        process.env.FRONTEND_URL || 'http://localhost:5173',
+        'http://127.0.0.1:5173',
+        'http://localhost:5174',
+        'http://127.0.0.1:5174'
+    ],
     credentials: true
 }));
 
@@ -235,12 +241,14 @@ app.get('/rooms/:id', async (req, res) => {
 
 // BOOK ROOM
 app.post('/book', async (req, res) => {
-    const { userId, roomId, date, startTime, endTime } = req.body;
+    const { userId, roomId, date, startTime, endTime, type } = req.body;
 
     // Validate required fields
     if (!userId || !roomId || !date || !startTime || !endTime) {
         return res.status(400).json({ error: 'All fields are required' });
     }
+
+    const bookingType = type === 'reservation' ? 'reservation' : 'booking';
 
     try {
         // Check if room exists
@@ -290,44 +298,52 @@ app.post('/book', async (req, res) => {
 
         // Create booking
         const [result] = await dbPromise.query(
-            'INSERT INTO bookings (user_id, room_id, booking_date, start_time, end_time, status) VALUES (?, ?, ?, ?, ?, ?)',
-            [userId, roomId, date, startTime, endTime, 'pending']
+            'INSERT INTO bookings (user_id, room_id, booking_date, start_time, end_time, type, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [userId, roomId, date, startTime, endTime, bookingType, 'pending']
         );
 
-        console.log(`✅ Booking created: Room ${room.name} by ${user.email}`);
+        console.log(`✅ ${bookingType === 'reservation' ? 'Reservation' : 'Booking'} created: Room ${room.name} by ${user.email}`);
 
         // Send email to admin
         const adminEmail = process.env.ADMIN_EMAIL;
         if (adminEmail) {
             sendMail(
                 adminEmail,
-                'New Room Booking Request',
-                `New booking request:\n\nRoom: ${room.name}\nUser: ${user.full_name} (${user.email})\nDate: ${date}\nTime: ${startTime} - ${endTime}`,
+                `New Room ${bookingType === 'reservation' ? 'Reservation' : 'Booking'} Request`,
+                `New ${bookingType} request:\n\nRoom: ${room.name}\nUser: ${user.full_name} (${user.email})\nDate: ${date}\nTime: ${startTime} - ${endTime}`,
                 `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2 style="color: #0B4F6C;">New Room Booking Request</h2>
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+                    <h2 style="color: #0B4F6C;">New Room ${bookingType === 'reservation' ? 'Reservation' : 'Booking'} Request</h2>
+                    <p>A user has placed a new ${bookingType} request.</p>
                     <table style="width: 100%; border-collapse: collapse;">
                         <tr>
-                            <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Room:</strong></td>
-                            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${room.name}</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Room:</strong></td>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;">${room.name}</td>
                         </tr>
                         <tr>
-                            <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>User:</strong></td>
-                            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${user.full_name}</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>User:</strong></td>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;">${user.full_name}</td>
                         </tr>
                         <tr>
-                            <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Email:</strong></td>
-                            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${user.email}</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Email:</strong></td>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;">${user.email}</td>
                         </tr>
                         <tr>
-                            <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Date:</strong></td>
-                            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${date}</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Date:</strong></td>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;">${date}</td>
                         </tr>
                         <tr>
-                            <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Time:</strong></td>
-                            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${startTime} - ${endTime}</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Time:</strong></td>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;">${startTime} - ${endTime}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Type:</strong></td>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee; text-transform: capitalize;">${bookingType}</td>
                         </tr>
                     </table>
+                    <div style="margin-top: 20px; text-align: center;">
+                        <a href="${process.env.FRONTEND_URL}/admin-dashboard" style="background: #0B4F6C; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Manage in Dashboard</a>
+                    </div>
                 </div>
                 `
             );
@@ -336,42 +352,39 @@ app.post('/book', async (req, res) => {
         // Send confirmation email to user
         sendMail(
             user.email,
-            'Room Booking Confirmation',
-            `Hello ${user.full_name},\n\nYour booking request has been received!\n\nRoom: ${room.name}\nDate: ${date}\nTime: ${startTime} - ${endTime}\n\nYou will receive a confirmation once approved.\n\nBest regards,\nSwahiliPot Hub Team`,
+            `Room ${bookingType === 'reservation' ? 'Reservation' : 'Booking'} Confirmation`,
+            `Hello ${user.full_name},\n\nYour ${bookingType} request has been received!\n\nRoom: ${room.name}\nDate: ${date}\nTime: ${startTime} - ${endTime}\n\nYou will receive a confirmation once reviewed.\n\nBest regards,\nSwahiliPot Hub Team`,
             `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #0B4F6C;">Booking Confirmation</h2>
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+                <h2 style="color: #0B4F6C; border-bottom: 2px solid #0B4F6C; padding-bottom: 10px;">${bookingType === 'reservation' ? 'Reservation' : 'Booking'} Received!</h2>
                 <p>Hello <strong>${user.full_name}</strong>,</p>
-                <p>Your booking request has been received!</p>
-                <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-                    <tr>
-                        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Room:</strong></td>
-                        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${room.name}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Date:</strong></td>
-                        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${date}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Time:</strong></td>
-                        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${startTime} - ${endTime}</td>
-                    </tr>
-                </table>
-                <p>You will receive a confirmation once approved.</p>
-                <br>
-                <p>Best regards,<br><strong>SwahiliPot Hub Team</strong></p>
+                <p>Thank you for choosing SwahiliPot Hub. Your request for a room ${bookingType} is being processed.</p>
+                
+                <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <h3 style="margin-top: 0; color: #333;">Summary:</h3>
+                    <p style="margin: 5px 0;"><strong>Space:</strong> ${room.name}</p>
+                    <p style="margin: 5px 0;"><strong>Date:</strong> ${date}</p>
+                    <p style="margin: 5px 0;"><strong>Time Slot:</strong> ${startTime} - ${endTime}</p>
+                    <p style="margin: 5px 0;"><strong>Status:</strong> Pending Approval</p>
+                </div>
+
+                <p>Our administration team will review your request and get back to you shortly.</p>
+                <div style="margin-top: 30px; font-size: 12px; color: #777; border-top: 1px solid #eee; padding-top: 10px;">
+                    This is an automated message from SwahiliPot Hub Room Booking System.
+                </div>
             </div>
             `
         );
 
         res.status(201).json({
-            message: 'Booking created successfully',
+            message: `${bookingType === 'reservation' ? 'Reservation' : 'Booking'} created successfully`,
             booking: {
                 id: result.insertId,
                 roomName: room.name,
                 date,
                 startTime,
                 endTime,
+                type: bookingType,
                 status: 'pending'
             }
         });
@@ -379,6 +392,35 @@ app.post('/book', async (req, res) => {
     } catch (error) {
         console.error('Booking error:', error);
         res.status(500).json({ error: 'Booking failed' });
+    }
+});
+
+// GET ALL BOOKINGS (Admin Only)
+app.get('/admin/bookings', async (req, res) => {
+    try {
+        const [bookings] = await dbPromise.query(
+            `SELECT 
+                b.id,
+                b.booking_date,
+                b.start_time,
+                b.end_time,
+                b.type,
+                b.status,
+                b.created_at,
+                r.name as room_name,
+                r.space,
+                u.full_name as user_name,
+                u.email as user_email
+            FROM bookings b
+            JOIN rooms r ON b.room_id = r.id
+            JOIN users u ON b.user_id = u.id
+            ORDER BY b.booking_date DESC, b.start_time DESC`
+        );
+
+        res.json(bookings);
+    } catch (error) {
+        console.error('Get admin bookings error:', error);
+        res.status(500).json({ error: 'Failed to fetch admin bookings' });
     }
 });
 
@@ -393,6 +435,7 @@ app.get('/bookings/user/:userId', async (req, res) => {
                 b.booking_date,
                 b.start_time,
                 b.end_time,
+                b.type,
                 b.status,
                 b.created_at,
                 r.name as room_name,
@@ -409,6 +452,56 @@ app.get('/bookings/user/:userId', async (req, res) => {
     } catch (error) {
         console.error('Get bookings error:', error);
         res.status(500).json({ error: 'Failed to fetch bookings' });
+    }
+});
+
+// CRON JOB: Send reminders every 30 minutes
+nodeCron.schedule('*/30 * * * *', async () => {
+    console.log('⏰ Running booking reminder check...');
+    try {
+        const now = new Date();
+        const oneHourFromNow = new Date(now.getTime() + (60 * 60 * 1000));
+
+        const dateStr = now.toISOString().split('T')[0];
+        const timeStr = now.toTimeString().split(' ')[0];
+        const futureTimeStr = oneHourFromNow.toTimeString().split(' ')[0];
+
+        const [upcoming] = await dbPromise.query(
+            `SELECT b.*, u.full_name, u.email, r.name as room_name 
+             FROM bookings b
+             JOIN users u ON b.user_id = u.id
+             JOIN rooms r ON b.room_id = r.id
+             WHERE b.booking_date = ? 
+             AND b.start_time > ? 
+             AND b.start_time <= ?
+             AND b.status = 'confirmed'`,
+            [dateStr, timeStr, futureTimeStr]
+        );
+
+        for (const booking of upcoming) {
+            console.log(`📧 Sending reminder to ${booking.email} for ${booking.room_name}`);
+            sendMail(
+                booking.email,
+                'Upcoming Room Booking Reminder',
+                `Reminder: Your booking for ${booking.room_name} is starting at ${booking.start_time}.`,
+                `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #0B4F6C; padding: 20px; border-radius: 10px;">
+                    <h2 style="color: #0B4F6C;">Reminder: Upcoming Booking</h2>
+                    <p>Hello <strong>${booking.full_name}</strong>,</p>
+                    <p>This is a friendly reminder that your booking/reservation for <strong>${booking.room_name}</strong> is starting within the hour.</p>
+                    
+                    <div style="background: #f0f7fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                        <p style="margin: 5px 0;"><strong>Time:</strong> ${booking.start_time} - ${booking.end_time}</p>
+                        <p style="margin: 5px 0;"><strong>Location:</strong> SwahiliPot Hub</p>
+                    </div>
+
+                    <p>We look forward to seeing you!</p>
+                </div>
+                `
+            );
+        }
+    } catch (error) {
+        console.error('Reminder cron error:', error);
     }
 });
 
