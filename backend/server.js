@@ -12,12 +12,7 @@ const app = express();
 // Middleware
 app.use(express.json());
 app.use(cors({
-    origin: [
-        process.env.FRONTEND_URL || 'http://localhost:5173',
-        'http://127.0.0.1:5173',
-        'http://localhost:5174',
-        'http://127.0.0.1:5174'
-    ],
+    origin: true, // Allow all origins for dev
     credentials: true
 }));
 
@@ -119,14 +114,14 @@ app.post('/signup', async (req, res) => {
         // Send welcome email (don't wait for it)
         sendMail(
             email,
-            'Welcome to SwahiliPot Hub!',
+            'Welcome to SwahiliPot Hub Booking System!',
             `Hello ${fullName},\n\nWelcome to SwahiliPot Hub Room Booking System! You can now book rooms for your meetings and events.\n\nBest regards,\nSwahiliPot Hub Team`,
             `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2 style="color: #0B4F6C;">Welcome to SwahiliPot Hub!</h2>
                 <p>Hello <strong>${fullName}</strong>,</p>
                 <p>Welcome to SwahiliPot Hub Room Booking System! You can now book rooms for your meetings and events.</p>
-                <p>Get started by logging in and exploring our available rooms.</p>
+                <p>Get started by logging in and exploring the available rooms.</p>
                 <br>
                 <p>Best regards,<br><strong>SwahiliPot Hub Team</strong></p>
             </div>
@@ -189,48 +184,91 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// GET ROOMS (with availability check)
+// GET ROOMS (with dynamic status for a specific date)
 app.get('/rooms', async (req, res) => {
-    const { date } = req.query;
+    // Default to today in local time if no date provided
+    const today = new Date().toLocaleDateString('en-CA');
+    const date = req.query.date || today;
 
     try {
-        let query = `
+        // Join with bookings to see if room is taken on this specific date
+        // We use a subquery to avoid multiple rows per room if there are multiple bookings
+        const query = `
             SELECT 
-                r.id,
-                r.name,
-                r.space,
-                r.capacity,
-                r.amenities,
-                r.status
+                r.*,
+                (SELECT b.type FROM bookings b 
+                 WHERE b.room_id = r.id 
+                 AND b.booking_date = ? 
+                 AND b.status IN ('pending', 'confirmed')
+                 LIMIT 1) as current_booking_type
             FROM rooms r
+            ORDER BY r.name
         `;
 
-        // If date is provided, filter out booked rooms for that date
-        if (date) {
-            query += `
-                WHERE r.id NOT IN (
-                    SELECT room_id 
-                    FROM bookings 
-                    WHERE booking_date = ? 
-                    AND status IN ('pending', 'confirmed')
-                )
-            `;
-        }
+        const [rooms] = await dbPromise.query(query, [date]);
 
-        query += ' ORDER BY r.name';
+        // Parse JSON amenities and determine status
+        const processedRooms = rooms.map(room => {
+            let status = 'Available';
+            if (room.current_booking_type) {
+                status = room.current_booking_type === 'reservation' ? 'Reserved' : 'Booked';
+            }
 
-        const [rooms] = await dbPromise.query(query, date ? [date] : []);
+            return {
+                ...room,
+                status: status,
+                amenities: JSON.parse(room.amenities || '[]')
+            };
+        });
 
-        // Parse JSON amenities
-        const parsedRooms = rooms.map(room => ({
-            ...room,
-            amenities: JSON.parse(room.amenities || '[]')
-        }));
-
-        res.json(parsedRooms);
+        res.json(processedRooms);
     } catch (error) {
         console.error('Get rooms error:', error);
         res.status(500).json({ error: 'Failed to fetch rooms' });
+    }
+});
+
+// ADD NEW ROOM (Admin only)
+app.post('/rooms', async (req, res) => {
+    const { name, space, capacity, amenities } = req.body;
+
+    try {
+        const [result] = await dbPromise.query(
+            'INSERT INTO rooms (name, space, capacity, amenities, status) VALUES (?, ?, ?, ?, ?)',
+            [name, space, capacity, JSON.stringify(amenities || []), 'Available']
+        );
+
+        res.status(201).json({
+            id: result.insertId,
+            name,
+            space,
+            capacity,
+            amenities,
+            status: 'Available'
+        });
+    } catch (error) {
+        console.error('Add room error:', error);
+        res.status(500).json({ error: 'Failed to add room' });
+    }
+});
+
+// DELETE ROOM (Admin only)
+app.delete('/rooms/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        // First delete related bookings to maintain integrity
+        await dbPromise.query('DELETE FROM bookings WHERE room_id = ?', [id]);
+        const [result] = await dbPromise.query('DELETE FROM rooms WHERE id = ?', [id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Room not found' });
+        }
+
+        res.json({ message: 'Room deleted successfully' });
+    } catch (error) {
+        console.error('Delete room error:', error);
+        res.status(500).json({ error: 'Failed to delete room' });
     }
 });
 
@@ -413,6 +451,84 @@ app.post('/book', async (req, res) => {
     } catch (error) {
         console.error('Booking error:', error);
         res.status(500).json({ error: 'Booking failed' });
+    }
+});
+
+// UPDATE BOOKING STATUS (Approve/Reject)
+app.put('/bookings/:id/status', async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!['confirmed', 'rejected'].includes(status)) {
+        return res.status(400).json({ error: 'Invalid status. Must be confirmed or rejected' });
+    }
+    try {
+        const [bookings] = await dbPromise.query(
+            `SELECT b.*, u.full_name, u.email, r.name as room_name 
+             FROM bookings b
+             JOIN users u ON b.user_id = u.id
+             JOIN rooms r ON b.room_id = r.id
+             WHERE b.id = ?`,
+            [id]
+        );
+
+        if (bookings.length === 0) {
+            return res.status(404).json({ error: 'Booking not found' });
+        }
+
+        const booking = bookings[0];
+
+        // Update status
+        await dbPromise.query('UPDATE bookings SET status = ? WHERE id = ?', [status, id]);
+
+        console.log(`✅ Booking #${id} ${status} by admin`);
+
+        // Send email to user
+        const subject = status === 'confirmed'
+            ? `✅ START PACKING! Your ${booking.type} is Confirmed`
+            : `❌ Update regarding your ${booking.type} request`;
+
+        const htmlContent = status === 'confirmed'
+            ? `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #4CAF50; padding: 20px; border-radius: 10px;">
+                <h2 style="color: #4CAF50;">🎉 Awesome News, ${booking.full_name}!</h2>
+                <p>Your <strong>${booking.type} for ${booking.room_name}</strong> has been officially <strong>APPROVED</strong>.</p>
+                
+                <div style="background: #f0f9f0; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <p style="margin: 5px 0;"><strong>📅 Date:</strong> ${new Date(booking.booking_date).toDateString()}</p>
+                    <p style="margin: 5px 0;"><strong>⏰ Time:</strong> ${booking.start_time} - ${booking.end_time}</p>
+                    <p style="margin: 5px 0;"><strong>📍 Location:</strong> SwahiliPot Hub</p>
+                </div>
+
+                <p>We're excited to host you! See you there.</p>
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="${process.env.FRONTEND_URL}/bookings" style="background: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">View Details</a>
+                </div>
+            </div>`
+            : `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #f44336; padding: 20px; border-radius: 10px;">
+                <h2 style="color: #f44336;">Update Regarding Your Request</h2>
+                <p>Hello ${booking.full_name},</p>
+                <p>We received your request for <strong>${booking.room_name}</strong> on ${new Date(booking.booking_date).toDateString()}.</p>
+                <p>Unfortunately, we are unable to approve this specific request at this time.</p>
+                <p>This could be due to a scheduling conflict or maintenance. Please try booking a different room or time slot.</p>
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="${process.env.FRONTEND_URL}" style="background: #f44336; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Browse Available Rooms</a>
+                </div>
+            </div>`;
+
+        sendMail(
+            booking.email,
+            subject,
+            `Your booking status has been updated to: ${status}`,
+            htmlContent
+        );
+
+        res.json({ message: `Booking ${status} successfully`, bookingId: id, newStatus: status });
+
+    } catch (error) {
+        console.error('Update status error:', error);
+        res.status(500).json({ error: 'Failed to update booking status' });
     }
 });
 
