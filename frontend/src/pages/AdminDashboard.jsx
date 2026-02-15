@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Edit, LogOut, LayoutGrid, Building2, Users, Clock, Monitor, XCircle } from 'lucide-react';
-import AddRoomModal from '../components/AddRoomModal';
-import Footer from '../components/Footer';
+import AddRoomModal from '../components/modals/AddRoomModal';
+import Footer from '../components/layout/Footer';
+import roomService from '../services/roomService';
+import bookingService from '../services/bookingService';
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
@@ -18,12 +20,12 @@ const AdminDashboard = () => {
         try {
             // Fetch Rooms for Today (to get dynamic status)
             const today = new Date().toLocaleDateString('en-CA');
-            const roomsRes = await fetch(`http://localhost:3000/rooms?date=${today}`);
+            const roomsRes = await roomService.getRooms(today);
             const roomsData = await roomsRes.json();
             setRooms(roomsData);
 
             // Fetch Admin Bookings
-            const bookingsRes = await fetch('http://localhost:3000/admin/bookings');
+            const bookingsRes = await bookingService.getAdminBookings();
             const bookingsData = await bookingsRes.json();
             setBookings(bookingsData);
 
@@ -80,9 +82,7 @@ const AdminDashboard = () => {
         if (!window.confirm('Are you sure you want to delete this room? This will also delete all its bookings.')) return;
 
         try {
-            const res = await fetch(`http://localhost:3000/rooms/${id}`, {
-                method: 'DELETE'
-            });
+            const res = await roomService.deleteRoom(id);
 
             if (res.ok) {
                 setRooms(prev => prev.filter(r => r.id !== id));
@@ -97,11 +97,7 @@ const AdminDashboard = () => {
 
     const handleAddRoom = async (roomData) => {
         try {
-            const res = await fetch('http://localhost:3000/rooms', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(roomData)
-            });
+            const res = await roomService.createRoom(roomData);
 
             if (res.ok) {
                 const newRoom = await res.json();
@@ -121,11 +117,7 @@ const AdminDashboard = () => {
         if (!window.confirm(`Are you sure you want to ${action} this booking?`)) return;
 
         try {
-            const res = await fetch(`http://localhost:3000/bookings/${bookingId}/status`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: newStatus })
-            });
+            const res = await bookingService.updateBookingStatus(bookingId, newStatus);
 
             if (res.ok) {
                 // Update local state to reflect change instantly
@@ -139,7 +131,7 @@ const AdminDashboard = () => {
 
                 if (bookingDate && bookingDate.includes(today)) {
                     // Refresh rooms to update status
-                    const roomsRes = await fetch(`http://localhost:3000/rooms?date=${today}`);
+                    const roomsRes = await roomService.getRooms(today);
                     const roomsData = await roomsRes.json();
                     setRooms(roomsData);
                 }

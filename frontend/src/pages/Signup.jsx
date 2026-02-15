@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, Building2, Building } from 'lucide-react';
+import authService from '../services/authService';
 
 const Signup = () => {
     const navigate = useNavigate();
@@ -39,18 +40,7 @@ const Signup = () => {
         setLoading(true);
 
         try {
-            const response = await fetch('http://localhost:3000/signup', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    email: formData.email,
-                    password: formData.password,
-                    fullName: formData.fullName,
-                    department: formData.department,
-                }),
-            });
+            const response = await authService.signup(formData.email, formData.password, formData.fullName, formData.department);
 
             const data = await response.json();
 

@@ -1,0 +1,1 @@
+﻿const fetch = require('node-fetch'); (async () => { try { const res = await fetch('http://localhost:3000/bookings/1/status', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'confirmed' }) }); const data = await res.json(); console.log(data); } catch (e) { console.error(e); } })();

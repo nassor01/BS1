@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Building2, User, Eye, EyeOff } from 'lucide-react';
+import authService from '../services/authService';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -24,13 +25,7 @@ const Login = () => {
         setError('');
 
         try {
-            const response = await fetch('http://127.0.0.1:3000/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData),
-            });
+            const response = await authService.login(formData.email, formData.password);
 
             const data = await response.json();
 

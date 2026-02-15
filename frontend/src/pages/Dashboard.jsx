@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Users, DoorOpen, Bookmark } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import Sidebar from '../components/Sidebar';
-import BookingModal from '../components/BookingModal';
-import Footer from '../components/Footer';
+import Navbar from '../components/layout/Navbar';
+import Sidebar from '../components/layout/Sidebar';
+import BookingModal from '../components/modals/BookingModal';
+import Footer from '../components/layout/Footer';
+import roomService from '../services/roomService';
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -21,8 +22,8 @@ const Dashboard = () => {
         setError('');
         try {
             // Include date in query if we're in the 'available' view
-            const queryParam = currentView === 'available' ? `?date=${selectedDate}` : '';
-            const response = await fetch(`http://localhost:3000/rooms${queryParam}`);
+            const date = currentView === 'available' ? selectedDate : undefined;
+            const response = await roomService.getRooms(date);
 
             if (!response.ok) throw new Error('Failed to fetch rooms');
 

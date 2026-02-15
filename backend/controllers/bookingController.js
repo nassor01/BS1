@@ -1,0 +1,240 @@
+const BookingModel = require('../models/bookingModel');
+const RoomModel = require('../models/roomModel');
+const UserModel = require('../models/userModel');
+const sendMail = require('../utils/mailer');
+
+const bookingController = {
+    // BOOK ROOM
+    async createBooking(req, res) {
+        const { userId, roomId, date, startTime, endTime, type } = req.body;
+
+        // Validate required fields
+        if (!userId || !roomId || !date || !startTime || !endTime) {
+            return res.status(400).json({ error: 'All fields are required' });
+        }
+
+        const bookingType = type === 'reservation' ? 'reservation' : 'booking';
+
+        try {
+            // Check if room exists
+            const rooms = await RoomModel.findById(roomId);
+
+            if (rooms.length === 0) {
+                return res.status(404).json({ error: 'Room not found' });
+            }
+
+            const room = rooms[0];
+
+            // Check if room is already booked for this date/time
+            const existingBookings = await BookingModel.findConflicting(roomId, date, startTime, endTime);
+
+            if (existingBookings.length > 0) {
+                return res.status(409).json({
+                    error: 'Room is already booked for this time slot',
+                    conflictingBooking: existingBookings[0]
+                });
+            }
+
+            // Get user details
+            const users = await UserModel.findById(userId);
+
+            if (users.length === 0) {
+                return res.status(404).json({ error: 'User not found' });
+            }
+
+            const user = users[0];
+
+            // Create booking
+            const result = await BookingModel.create(userId, roomId, date, startTime, endTime, bookingType);
+
+            console.log(`✅ ${bookingType === 'reservation' ? 'Reservation' : 'Booking'} created: Room ${room.name} by ${user.email}`);
+
+            // Send email to admin
+            const adminEmail = process.env.ADMIN_EMAIL;
+            if (adminEmail) {
+                sendMail(
+                    adminEmail,
+                    `New Room ${bookingType === 'reservation' ? 'Reservation' : 'Booking'} Request`,
+                    `New ${bookingType} request:\n\nRoom: ${room.name}\nUser: ${user.full_name} (${user.email})\nDate: ${date}\nTime: ${startTime} - ${endTime}`,
+                    `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+                        <h2 style="color: #0B4F6C;">New Room ${bookingType === 'reservation' ? 'Reservation' : 'Booking'} Request</h2>
+                        <p>A user has placed a new ${bookingType} request.</p>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Room:</strong></td>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;">${room.name}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>User:</strong></td>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;">${user.full_name}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Email:</strong></td>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;">${user.email}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Date:</strong></td>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;">${date}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Time:</strong></td>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;">${startTime} - ${endTime}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Type:</strong></td>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee; text-transform: capitalize;">${bookingType}</td>
+                            </tr>
+                        </table>
+                        <div style="margin-top: 20px; text-align: center;">
+                            <a href="${process.env.FRONTEND_URL}/admin-dashboard" style="background: #0B4F6C; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Manage in Dashboard</a>
+                        </div>
+                    </div>
+                    `
+                );
+            }
+
+            // Send confirmation email to user
+            sendMail(
+                user.email,
+                `Room ${bookingType === 'reservation' ? 'Reservation' : 'Booking'} Confirmation`,
+                `Hello ${user.full_name},\n\nYour ${bookingType} request has been received!\n\nRoom: ${room.name}\nDate: ${date}\nTime: ${startTime} - ${endTime}\n\nYou will receive a confirmation once reviewed.\n\nBest regards,\nSwahiliPot Hub Team`,
+                `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+                    <h2 style="color: #0B4F6C; border-bottom: 2px solid #0B4F6C; padding-bottom: 10px;">${bookingType === 'reservation' ? 'Reservation' : 'Booking'} Received!</h2>
+                    <p>Hello <strong>${user.full_name}</strong>,</p>
+                    <p>Thank you for choosing SwahiliPot Hub. Your request for a room ${bookingType} is being processed.</p>
+                    
+                    <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                        <h3 style="margin-top: 0; color: #333;">Summary:</h3>
+                        <p style="margin: 5px 0;"><strong>Space:</strong> ${room.name}</p>
+                        <p style="margin: 5px 0;"><strong>Date:</strong> ${date}</p>
+                        <p style="margin: 5px 0;"><strong>Time Slot:</strong> ${startTime} - ${endTime}</p>
+                        <p style="margin: 5px 0;"><strong>Status:</strong> Pending Approval</p>
+                    </div>
+
+                    <p>Our administration team will review your request and get back to you shortly.</p>
+                    <div style="margin-top: 30px; font-size: 12px; color: #777; border-top: 1px solid #eee; padding-top: 10px;">
+                        This is an automated message from SwahiliPot Hub Room Booking System.
+                    </div>
+                </div>
+                `
+            );
+
+            res.status(201).json({
+                message: `${bookingType === 'reservation' ? 'Reservation' : 'Booking'} created successfully`,
+                booking: {
+                    id: result.insertId,
+                    roomName: room.name,
+                    date,
+                    startTime,
+                    endTime,
+                    type: bookingType,
+                    status: 'pending'
+                }
+            });
+
+        } catch (error) {
+            console.error('Booking error:', error);
+            res.status(500).json({ error: 'Booking failed' });
+        }
+    },
+
+    // UPDATE BOOKING STATUS (Approve/Reject)
+    async updateBookingStatus(req, res) {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        if (!['confirmed', 'rejected'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid status. Must be confirmed or rejected' });
+        }
+
+        try {
+            const bookings = await BookingModel.findByIdWithDetails(id);
+
+            if (bookings.length === 0) {
+                return res.status(404).json({ error: 'Booking not found' });
+            }
+
+            const booking = bookings[0];
+
+            // Update status
+            await BookingModel.updateStatus(id, status);
+
+            console.log(`✅ Booking #${id} ${status} by admin`);
+
+            // Send email to user
+            const subject = status === 'confirmed'
+                ? `✅ START PACKING! Your ${booking.type} is Confirmed`
+                : `❌ Update regarding your ${booking.type} request`;
+
+            const htmlContent = status === 'confirmed'
+                ? `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #4CAF50; padding: 20px; border-radius: 10px;">
+                    <h2 style="color: #4CAF50;">🎉 Awesome News, ${booking.full_name}!</h2>
+                    <p>Your <strong>${booking.type} for ${booking.room_name}</strong> has been officially <strong>APPROVED</strong>.</p>
+                    
+                    <div style="background: #f0f9f0; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                        <p style="margin: 5px 0;"><strong>📅 Date:</strong> ${new Date(booking.booking_date).toDateString()}</p>
+                        <p style="margin: 5px 0;"><strong>⏰ Time:</strong> ${booking.start_time} - ${booking.end_time}</p>
+                        <p style="margin: 5px 0;"><strong>📍 Location:</strong> SwahiliPot Hub</p>
+                    </div>
+
+                    <p>We're excited to host you! See you there.</p>
+                    <div style="text-align: center; margin-top: 20px;">
+                        <a href="${process.env.FRONTEND_URL}/bookings" style="background: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">View Details</a>
+                    </div>
+                </div>`
+                : `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #f44336; padding: 20px; border-radius: 10px;">
+                    <h2 style="color: #f44336;">Update Regarding Your Request</h2>
+                    <p>Hello ${booking.full_name},</p>
+                    <p>We received your request for <strong>${booking.room_name}</strong> on ${new Date(booking.booking_date).toDateString()}.</p>
+                    <p>Unfortunately, we are unable to approve this specific request at this time.</p>
+                    <p>This could be due to a scheduling conflict or maintenance. Please try booking a different room or time slot.</p>
+                    <div style="text-align: center; margin-top: 20px;">
+                        <a href="${process.env.FRONTEND_URL}" style="background: #f44336; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Browse Available Rooms</a>
+                    </div>
+                </div>`;
+
+            sendMail(
+                booking.email,
+                subject,
+                `Your booking status has been updated to: ${status}`,
+                htmlContent
+            );
+
+            res.json({ message: `Booking ${status} successfully`, bookingId: id, newStatus: status });
+
+        } catch (error) {
+            console.error('Update status error:', error);
+            res.status(500).json({ error: 'Failed to update booking status' });
+        }
+    },
+
+    // GET ALL BOOKINGS (Admin Only)
+    async getAdminBookings(req, res) {
+        try {
+            const bookings = await BookingModel.findAll();
+            res.json(bookings);
+        } catch (error) {
+            console.error('Get admin bookings error:', error);
+            res.status(500).json({ error: 'Failed to fetch admin bookings' });
+        }
+    },
+
+    // GET USER BOOKINGS
+    async getUserBookings(req, res) {
+        const { userId } = req.params;
+
+        try {
+            const bookings = await BookingModel.findByUserId(userId);
+            res.json(bookings);
+        } catch (error) {
+            console.error('Get bookings error:', error);
+            res.status(500).json({ error: 'Failed to fetch bookings' });
+        }
+    }
+};
+
+module.exports = bookingController;
