@@ -74,8 +74,6 @@ router.post('/auth/reset-password',
         body('token').notEmpty().withMessage('Reset token is required'),
         body('newPassword')
             .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
-            .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/)
-            .withMessage('Password must contain uppercase, lowercase, number, and special character')
     ],
     handleValidationErrors,
     authController.resetPassword

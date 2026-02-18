@@ -37,12 +37,6 @@ const Signup = () => {
             return;
         }
 
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
-        if (!passwordRegex.test(formData.password)) {
-            setError('Password must contain uppercase, lowercase, number, and special character (@$!%*?&)');
-            return;
-        }
-
         setLoading(true);
 
         try {

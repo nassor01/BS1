@@ -34,10 +34,6 @@ const ResetPassword = () => {
         if (formData.newPassword.length < 8) {
             return setError('Password must be at least 8 characters.');
         }
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/;
-        if (!passwordRegex.test(formData.newPassword)) {
-            return setError('Password must contain uppercase, lowercase, number, and special character (@$!%*?&).');
-        }
 
         setLoading(true);
         try {
@@ -131,10 +127,6 @@ const ResetPassword = () => {
                         <p>Password must contain:</p>
                         <ul>
                             <li className={formData.newPassword.length >= 8 ? 'met' : ''}>At least 8 characters</li>
-                            <li className={/[A-Z]/.test(formData.newPassword) ? 'met' : ''}>One uppercase letter</li>
-                            <li className={/[a-z]/.test(formData.newPassword) ? 'met' : ''}>One lowercase letter</li>
-                            <li className={/\d/.test(formData.newPassword) ? 'met' : ''}>One number</li>
-                            <li className={/[@$!%*?&]/.test(formData.newPassword) ? 'met' : ''}>One special character (@$!%*?&)</li>
                         </ul>
                     </div>
 
