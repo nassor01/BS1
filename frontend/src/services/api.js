@@ -83,7 +83,6 @@ async function apiFetch(endpoint, options = {}, requiresAuth = false) {
         ...options,
     };
 
-    // Add Authorization header if authentication is required or token is available
     if (requiresAuth || getAccessToken()) {
         const token = getAccessToken();
         if (token) {
@@ -91,28 +90,22 @@ async function apiFetch(endpoint, options = {}, requiresAuth = false) {
         }
     }
 
-    // Stringify body if it's an object
     if (config.body && typeof config.body === 'object') {
         config.body = JSON.stringify(config.body);
     }
 
     let response = await fetch(`${API_BASE_URL}${endpoint}`, config);
 
-    // If token expired, try to refresh and retry
     if (response.status === 401 && requiresAuth) {
         try {
             const errorData = await response.json();
             
             if (errorData.code === 'TOKEN_EXPIRED') {
-                // Refresh the token
                 const newToken = await refreshAccessToken();
-                
-                // Retry the original request with new token
                 config.headers['Authorization'] = `Bearer ${newToken}`;
                 response = await fetch(`${API_BASE_URL}${endpoint}`, config);
             }
         } catch (error) {
-            // If refresh fails, redirect to login
             clearAuth();
             window.location.href = '/login';
             throw error;

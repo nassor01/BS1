@@ -120,6 +120,87 @@ const authService = {
 
         const error = await response.json();
         return { success: false, error: error.error, status: response.status };
+    },
+
+    /**
+     * Request password reset PIN
+     */
+    async forgotPassword(email) {
+        const response = await apiFetch('/forgot-password', {
+            method: 'POST',
+            body: { email },
+        });
+
+        if (response.ok) {
+            return { success: true };
+        }
+
+        const error = await response.json();
+        return { success: false, error: error.error };
+    },
+
+    /**
+     * Reset password with PIN
+     */
+    async resetPasswordWithPin(pin, newPassword) {
+        const response = await apiFetch('/reset-password-pin', {
+            method: 'POST',
+            body: { pin, newPassword },
+        });
+
+        if (response.ok) {
+            return { success: true };
+        }
+
+        const error = await response.json();
+        return { success: false, error: error.error };
+    },
+
+    /**
+     * Get active users (admin only)
+     */
+    async getActiveUsers() {
+        const response = await authenticatedFetch('/active-users', {
+            method: 'GET',
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            return { success: true, activeUsers: data.activeUsers };
+        }
+
+        return { success: false, error: 'Failed to fetch active users' };
+    },
+
+    /**
+     * Disconnect a specific user (admin only)
+     */
+    async disconnectUser(userId) {
+        const response = await authenticatedFetch(`/disconnect-user/${userId}`, {
+            method: 'POST',
+        });
+
+        if (response.ok) {
+            return { success: true };
+        }
+
+        const error = await response.json();
+        return { success: false, error: error.error };
+    },
+
+    /**
+     * Logout and notify server to remove session
+     */
+    async logoutWithNotification() {
+        try {
+            await authenticatedFetch('/logout', {
+                method: 'POST',
+            });
+        } catch (e) {
+            // Ignore errors, local logout always works
+        }
+        clearAuth();
+        window.location.href = '/login';
     }
 };
 

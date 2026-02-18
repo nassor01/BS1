@@ -2,6 +2,7 @@ const speakeasy = require('speakeasy');
 const QRCode = require('qrcode');
 const jwt = require('jsonwebtoken');
 const UserModel = require('../models/userModel');
+const sessionManager = require('../services/sessionManager');
 const { generateAccessToken, generateRefreshToken } = require('../utils/tokenUtils');
 
 /**
@@ -164,6 +165,13 @@ const twoFactorController = {
                 const user = users[0];
                 const accessToken = generateAccessToken(user);
                 const refreshToken = generateRefreshToken(user);
+
+                sessionManager.addSession(user.id, {
+                    userId: user.id,
+                    email: user.email,
+                    fullName: user.full_name,
+                    role: user.role
+                });
 
                 console.log(`✅ 2FA verified, logging in: ${user.email}`);
 

@@ -6,48 +6,64 @@ import Sidebar from '../components/layout/Sidebar';
 import BookingModal from '../components/modals/BookingModal';
 import Footer from '../components/layout/Footer';
 import roomService from '../services/roomService';
+import bookingService from '../services/bookingService';
 
 const Dashboard = () => {
     const navigate = useNavigate();
+    const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString('en-CA'));
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedRoom, setSelectedRoom] = useState(null);
+    const [modalType, setModalType] = useState('booking');
     const [rooms, setRooms] = useState([]);
+    const [userBookings, setUserBookings] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [currentView, setCurrentView] = useState('available');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString('en-CA'));
 
-    const fetchRooms = async () => {
+    const fetchData = async () => {
         setLoading(true);
         setError('');
         try {
-            // Include date in query if we're in the 'available' view
-            const date = currentView === 'available' ? selectedDate : undefined;
-            const response = await roomService.getRooms(date);
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            
+            console.log('Dashboard fetchData - User:', user);
+            console.log('Dashboard fetchData - User ID:', user?.id);
+            
+            const [roomsRes, bookingsRes] = await Promise.all([
+                roomService.getRooms(selectedDate),
+                user ? bookingService.getUserBookings(user.id) : Promise.resolve({ ok: false })
+            ]);
 
-            if (!response.ok) throw new Error('Failed to fetch rooms');
+            console.log('Dashboard fetchData - Bookings response:', bookingsRes);
 
-            const data = await response.json();
-            setRooms(data);
+            if (!roomsRes.ok) throw new Error('Failed to fetch rooms');
+            const roomsData = await roomsRes.json();
+            setRooms(roomsData);
+
+            if (bookingsRes.ok) {
+                const bookingsData = await bookingsRes.json();
+                console.log('Dashboard fetchData - Bookings data:', bookingsData);
+                setUserBookings(bookingsData);
+            } else {
+                console.log('Dashboard fetchData - Bookings response not ok');
+            }
         } catch (err) {
-            console.error('Error fetching rooms:', err);
-            setError('Could not load rooms. Please check your connection.');
+            console.error('Error fetching data:', err);
+            setError('Could not load data. Please check your connection.');
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchRooms();
-    }, [currentView, selectedDate]);
-
-    // Modal State
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedRoom, setSelectedRoom] = useState(null);
-    const [modalType, setModalType] = useState('booking'); // 'booking' or 'reservation'
+        fetchData();
+    }, [selectedDate]);
 
     const handleNavigate = (viewId) => {
-        if (viewId === 'home') {
+        if (viewId === 'home' || viewId === 'available') {
             setCurrentView('available');
         } else {
             setCurrentView(viewId);
@@ -56,6 +72,9 @@ const Dashboard = () => {
     };
 
     const handleLogout = () => {
+        localStorage.removeItem('user');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
         navigate('/login');
     };
 
@@ -65,20 +84,27 @@ const Dashboard = () => {
         setIsModalOpen(true);
     };
 
-    // Filter rooms based on search term only (status filtering happens at API level for 'available' view)
+    const handleBookingSuccess = (bookingType) => {
+        fetchData();
+        if (bookingType === 'reservation') {
+            setCurrentView('reserved');
+        } else {
+            setCurrentView('booked');
+        }
+    };
+
     const filteredRooms = rooms.filter(room => {
         const matchesSearch = room.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            room.amenities.some(amenity => amenity.toLowerCase().includes(searchTerm.toLowerCase()));
+            room.amenities?.some(amenity => amenity.toLowerCase().includes(searchTerm.toLowerCase()));
+        return currentView === 'available' ? matchesSearch : false;
+    });
 
-        // In available view, the backend already marks things correctly.
-        // But for 'reserved' and 'booked' tabs, we filter based on the dynamic status returned.
-        if (currentView === 'available') return matchesSearch;
-
-        const matchesView = currentView === 'reserved' ? room.status === 'Reserved' :
-            currentView === 'booked' ? room.status === 'Booked' :
-                true;
-
-        return matchesSearch && matchesView;
+    const filteredBookings = userBookings.filter(booking => {
+        const matchesSearch = booking.room_name?.toLowerCase().includes(searchTerm.toLowerCase());
+        console.log('Filtering booking:', booking, 'currentView:', currentView);
+        if (currentView === 'reserved') return matchesSearch && booking.type === 'reservation';
+        if (currentView === 'booked') return matchesSearch && booking.type === 'booking';
+        return true;
     });
 
     const getPageTitle = () => {
@@ -106,6 +132,7 @@ const Dashboard = () => {
                 onClose={() => setIsModalOpen(false)}
                 room={selectedRoom}
                 type={modalType}
+                onSuccess={handleBookingSuccess}
             />
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-grow">
@@ -142,21 +169,56 @@ const Dashboard = () => {
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-20">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-                        <p className="text-gray-500">Checking availability...</p>
+                        <p className="text-gray-500">Loading...</p>
                     </div>
                 ) : error ? (
                     <div className="text-center py-12 bg-red-50 rounded-xl border border-red-100">
                         <p className="text-red-600 mb-4">{error}</p>
-                        <button
-                            onClick={fetchRooms}
-                            className="text-blue-600 font-bold hover:underline"
-                        >
+                        <button onClick={fetchData} className="text-blue-600 font-bold hover:underline">
                             Try Again
                         </button>
                     </div>
+                ) : currentView !== 'available' ? (
+                    filteredBookings.length === 0 ? (
+                        <div className="text-center py-12">
+                            <p className="text-gray-500 text-lg">No {currentView === 'reserved' ? 'reservations' : 'bookings'} found.</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {filteredBookings.map((booking) => (
+                                <div key={booking.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <h3 className="text-lg font-bold text-gray-900">{booking.room_name}</h3>
+                                            <p className="text-sm text-gray-500">{booking.space}</p>
+                                        </div>
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                            booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                                            booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                                'bg-red-100 text-red-800'
+                                        }`}>
+                                            {booking.status}
+                                        </span>
+                                    </div>
+
+                                    <div className="space-y-2 text-sm text-gray-600 mb-4">
+                                        <p className="flex items-center gap-2">
+                                            <span className="font-medium">Date:</span> {booking.booking_date}
+                                        </p>
+                                        <p className="flex items-center gap-2">
+                                            <span className="font-medium">Time:</span> {booking.start_time} - {booking.end_time}
+                                        </p>
+                                        <p className="flex items-center gap-2">
+                                            <span className="font-medium">Type:</span> {booking.type}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )
                 ) : filteredRooms.length === 0 ? (
                     <div className="text-center py-12">
-                        <p className="text-gray-500 text-lg">No rooms found in this category.</p>
+                        <p className="text-gray-500 text-lg">No rooms found.</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -183,11 +245,8 @@ const Dashboard = () => {
                                 <div className="mb-6">
                                     <p className="text-sm font-medium text-gray-900 mb-2">Amenities:</p>
                                     <div className="flex flex-wrap gap-2">
-                                        {room.amenities.map((amenity, index) => (
-                                            <span
-                                                key={index}
-                                                className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200"
-                                            >
+                                        {room.amenities?.map((amenity, index) => (
+                                            <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
                                                 {amenity}
                                             </span>
                                         ))}

@@ -85,6 +85,14 @@ const UserModel = {
         return result;
     },
 
+    async clearPasswordResetToken(userId) {
+        const [result] = await dbPromise.query(
+            'UPDATE users SET password_reset_token = NULL, password_reset_expires = NULL WHERE id = ?',
+            [userId]
+        );
+        return result;
+    },
+
     // ============================================================
     // ACCOUNT LOCKOUT
     // ============================================================

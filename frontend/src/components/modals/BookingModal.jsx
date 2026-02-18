@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, Calendar as CalendarIcon, Clock, ChevronDown } from 'lucide-react';
 import bookingService from '../../services/bookingService';
 
-const BookingModal = ({ isOpen, onClose, room, type }) => {
+const BookingModal = ({ isOpen, onClose, room, type, onSuccess }) => {
     const isReservation = type === 'reservation';
     const [formData, setFormData] = useState({
         date: new Date().toLocaleDateString('en-CA'),
@@ -32,24 +32,38 @@ const BookingModal = ({ isOpen, onClose, room, type }) => {
         const user = JSON.parse(userStr);
 
         try {
+            const convertTime = (timeStr) => {
+                if (!timeStr) return '';
+                const [time, period] = timeStr.split(' ');
+                const [hours, minutes] = time.split(':');
+                let hour = parseInt(hours);
+                if (period === 'PM' && hour !== 12) hour += 12;
+                if (period === 'AM' && hour === 12) hour = 0;
+                return `${hour.toString().padStart(2, '0')}:${minutes}`;
+            };
+
             const response = await bookingService.createBooking({
                 userId: user.id,
                 roomId: room.id,
                 date: formData.date,
-                startTime: formData.startTime.replace(' AM', ':00').replace(' PM', ':00'),
-                endTime: formData.endTime.replace(' AM', ':00').replace(' PM', ':00'),
+                startTime: convertTime(formData.startTime),
+                endTime: convertTime(formData.endTime),
                 type: type
             });
 
+            console.log('Booking response status:', response.status);
             const data = await response.json();
+            console.log('Booking response data:', data);
 
             if (response.ok) {
                 setSuccess(true);
+                console.log('Booking successful, calling onSuccess callback with type:', type);
                 setTimeout(() => {
                     onClose();
+                    if (onSuccess) onSuccess(type);
                 }, 2000);
             } else {
-                setError(data.error || 'Booking failed');
+                setError(data.error || data.details || 'Booking failed');
             }
         } catch (err) {
             console.error('Booking error:', err);
@@ -104,7 +118,7 @@ const BookingModal = ({ isOpen, onClose, room, type }) => {
                         )}
                         {success && (
                             <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-600 font-medium">
-                                Booking confirmed! Check your email for details.
+                                Booking submitted successfully!
                             </div>
                         )}
                         {/* Date Picker */}

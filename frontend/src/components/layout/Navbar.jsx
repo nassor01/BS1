@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { LogOut, Building2, Menu } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const Navbar = ({ onMenuClick }) => {
     const navigate = useNavigate();
@@ -25,6 +25,8 @@ const Navbar = ({ onMenuClick }) => {
 
     const handleLogout = () => {
         localStorage.removeItem('user');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
         localStorage.removeItem('activeSessions');
         navigate('/login');
     };
@@ -42,13 +44,18 @@ const Navbar = ({ onMenuClick }) => {
                         </button>
 
                         <div className="flex-shrink-0 flex items-center">
-                            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
-                                <Building2 className="text-white w-6 h-6" />
-                            </div>
-                            <div>
-                                <h1 className="text-lg font-bold text-gray-900 leading-none"> Swahilipot Hub BS1 </h1>
-                                <p className="text-sm text-gray-500">Booking System</p>
-                            </div>
+                            <Link
+                                to="/dashboard"
+                                className="flex items-center hover:opacity-80 transition-opacity"
+                            >
+                                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
+                                    <Building2 className="text-white w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h1 className="text-lg font-bold text-gray-900 leading-none"> Swahilipot Hub BS1 </h1>
+                                    <p className="text-sm text-gray-500">Booking System</p>
+                                </div>
+                            </Link>
                         </div>
                     </div>
                     <div className="flex items-center">

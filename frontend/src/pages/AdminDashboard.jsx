@@ -5,6 +5,8 @@ import AddRoomModal from '../components/modals/AddRoomModal';
 import Footer from '../components/layout/Footer';
 import roomService from '../services/roomService';
 import bookingService from '../services/bookingService';
+import authService from '../services/authService';
+import socketService from '../services/socketService';
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
@@ -14,6 +16,7 @@ const AdminDashboard = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('rooms'); // 'rooms', 'users', or 'bookings'
     const [loading, setLoading] = useState(false);
+    const [isConnected, setIsConnected] = useState(false);
 
     const fetchData = async () => {
         setLoading(true);
@@ -22,16 +25,21 @@ const AdminDashboard = () => {
             const today = new Date().toLocaleDateString('en-CA');
             const roomsRes = await roomService.getRooms(today);
             const roomsData = await roomsRes.json();
-            setRooms(roomsData);
+            
+            // Show only available rooms - booked/reserved rooms should not appear in the list
+            const availableRooms = roomsData.filter(room => room.status === 'Available');
+            setRooms(availableRooms);
 
             // Fetch Admin Bookings
             const bookingsRes = await bookingService.getAdminBookings();
             const bookingsData = await bookingsRes.json();
             setBookings(bookingsData);
 
-            // Sessions still from local for now as per previous mock logic
-            const storedSessions = JSON.parse(localStorage.getItem('activeSessions')) || [];
-            setActiveSessions(storedSessions);
+            // Fetch active users from backend
+            const usersRes = await authService.getActiveUsers();
+            if (usersRes.success) {
+                setActiveSessions(usersRes.activeUsers);
+            }
         } catch (err) {
             console.error('Error fetching admin data:', err);
         } finally {
@@ -46,6 +54,22 @@ const AdminDashboard = () => {
             return;
         }
         fetchData();
+
+        // Set up real-time socket connection for active users
+        socketService.connect(
+            () => setIsConnected(true),
+            () => setIsConnected(false)
+        );
+        
+        const handleActiveUsersUpdate = (activeUsers) => {
+            setActiveSessions(activeUsers);
+        };
+        
+        socketService.onActiveUsersUpdate(handleActiveUsersUpdate);
+
+        return () => {
+            socketService.offActiveUsersUpdate(handleActiveUsersUpdate);
+        };
     }, [navigate]);
 
     const calculateDuration = (loginTime) => {
@@ -65,17 +89,16 @@ const AdminDashboard = () => {
         }
     };
 
-    const removeSession = (id) => {
-        const updatedSessions = activeSessions.filter(s => s.id !== id);
-        setActiveSessions(updatedSessions);
-        // We'll keep sessions in local for now as backend doesn't track them yet, 
-        // but we're moving rooms to DB
-        localStorage.setItem('activeSessions', JSON.stringify(updatedSessions));
+    const removeSession = async (id) => {
+        try {
+            await authService.disconnectUser(id);
+        } catch (err) {
+            console.error('Error disconnecting user:', err);
+        }
     };
 
     const handleLogout = () => {
-        localStorage.removeItem('user');
-        navigate('/login');
+        authService.logoutWithNotification();
     };
 
     const deleteRoom = async (id) => {
@@ -125,15 +148,13 @@ const AdminDashboard = () => {
                     b.id === bookingId ? { ...b, status: newStatus } : b
                 ));
 
-                // If confirmed, we might want to refresh rooms to show it as taken if it's for today
-                const today = new Date().toLocaleDateString('en-CA');
-                const bookingDate = bookings.find(b => b.id === bookingId)?.booking_date;
-
-                if (bookingDate && bookingDate.includes(today)) {
-                    // Refresh rooms to update status
+                // If confirmed, refresh rooms - only show available ones
+                if (newStatus === 'confirmed') {
+                    const today = new Date().toLocaleDateString('en-CA');
                     const roomsRes = await roomService.getRooms(today);
                     const roomsData = await roomsRes.json();
-                    setRooms(roomsData);
+                    const availableRooms = roomsData.filter(room => room.status === 'Available');
+                    setRooms(availableRooms);
                 }
 
                 alert(`Booking ${action}d successfully and user notified!`);
@@ -197,6 +218,8 @@ const AdminDashboard = () => {
                         >
                             <Users className="w-4 h-4 mr-2" />
                             Active Users
+                            <span className={`ml-2 w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-gray-300'}`} title={isConnected ? 'Real-time connected' : 'Reconnecting...'}>
+                            </span>
                         </button>
                     </div>
 

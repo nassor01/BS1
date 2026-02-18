@@ -2,6 +2,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const UserModel = require('../models/userModel');
 const sendMail = require('../utils/mailer');
+const sessionManager = require('../services/sessionManager');
 const {
     generateAccessToken,
     generateRefreshToken,
@@ -150,6 +151,13 @@ const authController = {
             const accessToken = generateAccessToken(user);
             const refreshToken = generateRefreshToken(user);
 
+            sessionManager.addSession(user.id, {
+                userId: user.id,
+                email: user.email,
+                fullName: user.full_name,
+                role: user.role
+            });
+
             console.log(`✅ User logged in: ${user.email}`);
 
             res.json({
@@ -247,7 +255,7 @@ const authController = {
     },
 
     // ----------------------------------------------------------
-    // FORGOT PASSWORD
+    // FORGOT PASSWORD - Send PIN
     // ----------------------------------------------------------
     async forgotPassword(req, res) {
         const { email } = req.body;
@@ -260,34 +268,89 @@ const authController = {
             const users = await UserModel.findByEmail(email);
 
             if (users.length === 0) {
-                return res.json({ message: 'If that email is registered, a password reset link has been sent.' });
+                return res.json({ message: 'If that email is registered, a password reset PIN has been sent.' });
             }
 
             const user = users[0];
-            const resetToken = generateSecureToken();
-            const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-            await UserModel.setPasswordResetToken(user.id, resetToken, resetExpires);
+            
+            // Generate 6-digit PIN
+            const resetPin = Math.floor(100000 + Math.random() * 900000).toString();
+            const resetExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+            
+            await UserModel.setPasswordResetToken(user.id, resetPin, resetExpires);
 
-            const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
             sendMail(
                 email,
-                'Password Reset - SwahiliPot Hub',
-                `Reset your password: ${resetUrl}\n\nThis link expires in 1 hour.`,
+                'Password Reset PIN - SwahiliPot Hub',
+                `Your password reset PIN is: ${resetPin}\n\nThis PIN expires in 15 minutes.`,
                 `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
-                    <h2 style="color:#0B4F6C;">Password Reset Request</h2>
+                    <h2 style="color:#0B4F6C;">Password Reset PIN</h2>
                     <p>Hello <strong>${user.full_name}</strong>,</p>
-                    <p>We received a request to reset your password. Click below to proceed:</p>
-                    <a href="${resetUrl}" style="display:inline-block;padding:12px 24px;background:#dc2626;color:white;text-decoration:none;border-radius:6px;margin:16px 0;">Reset Password</a>
-                    <p style="color:#666;font-size:12px;">This link expires in 1 hour. If you didn't request this, ignore this email.</p>
+                    <p>We received a request to reset your password. Use the PIN below:</p>
+                    <div style="font-size:32px;font-weight:bold;letter-spacing:8px;padding:20px;background:#f3f4f6;border-radius:8px;margin:20px 0;text-align:center;color:#0B4F6C;">${resetPin}</div>
+                    <p style="color:#666;font-size:14px;">This PIN expires in <strong>15 minutes</strong>.</p>
+                    <p style="color:#666;font-size:12px;">If you didn't request this, ignore this email.</p>
                 </div>`
             ).catch(err => console.error('Failed to send forgot password email:', err.message));
 
-            console.log(`📧 Password reset email sent to: ${email}`);
-            res.json({ message: 'If that email is registered, a password reset link has been sent.' });
+            console.log(`📧 Password reset PIN sent to: ${email} (PIN: ${resetPin})`);
+            res.json({ message: 'If that email is registered, a password reset PIN has been sent.' });
 
         } catch (error) {
             console.error('Forgot password error:', error);
             res.status(500).json({ error: 'Failed to process password reset request' });
+        }
+    },
+
+    // ----------------------------------------------------------
+    // RESET PASSWORD WITH PIN
+    // ----------------------------------------------------------
+    async resetPasswordWithPin(req, res) {
+        const { pin, newPassword } = req.body;
+
+        if (!pin || !newPassword) {
+            return res.status(400).json({ error: 'PIN and new password are required' });
+        }
+
+        try {
+            const users = await UserModel.findByPasswordResetToken(pin);
+            
+            if (users.length === 0) {
+                return res.status(400).json({ error: 'Invalid or expired PIN' });
+            }
+
+            const user = users[0];
+            
+            // Check if PIN has expired
+            if (new Date(user.password_reset_expires) < new Date()) {
+                return res.status(400).json({ error: 'PIN has expired. Please request a new one.' });
+            }
+
+            const saltRounds = 12;
+            const passwordHash = await bcrypt.hash(newPassword, saltRounds);
+            
+            // Update password and clear reset token
+            await UserModel.updatePassword(user.id, passwordHash);
+            await UserModel.clearPasswordResetToken(user.id);
+
+            console.log(`✅ Password reset with PIN for: ${user.email}`);
+
+            sendMail(
+                user.email,
+                'Password Changed - SwahiliPot Hub',
+                'Your password has been changed successfully.',
+                `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+                    <h2 style="color:#0B4F6C;">Password Changed</h2>
+                    <p>Your password has been changed successfully.</p>
+                    <p>If you did not make this change, please contact support immediately.</p>
+                </div>`
+            ).catch(err => console.error('Failed to send password changed email:', err.message));
+
+            res.json({ message: 'Password reset successfully. You can now log in with your new password.' });
+
+        } catch (error) {
+            console.error('Reset password with PIN error:', error);
+            res.status(500).json({ error: 'Password reset failed' });
         }
     },
 
