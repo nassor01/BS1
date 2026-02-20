@@ -165,19 +165,19 @@ const bookingController = {
 
             // Send email to user
             const subject = status === 'confirmed'
-                ? `✅ START PACKING! Your ${booking.type} is Confirmed`
-                : `❌ Update regarding your ${booking.type} request`;
+                ? ` START PACKING! Your ${booking.type} is Confirmed`
+                : ` Update regarding your ${booking.type} request`;
 
             const htmlContent = status === 'confirmed'
                 ? `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #4CAF50; padding: 20px; border-radius: 10px;">
-                    <h2 style="color: #4CAF50;">🎉 Awesome News, ${booking.full_name}!</h2>
+                    <h2 style="color: #4CAF50;"> Awesome News, ${booking.full_name}!</h2>
                     <p>Your <strong>${booking.type} for ${booking.room_name}</strong> has been officially <strong>APPROVED</strong>.</p>
                     
                     <div style="background: #f0f9f0; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                        <p style="margin: 5px 0;"><strong>📅 Date:</strong> ${new Date(booking.booking_date).toDateString()}</p>
-                        <p style="margin: 5px 0;"><strong>⏰ Time:</strong> ${booking.start_time} - ${booking.end_time}</p>
-                        <p style="margin: 5px 0;"><strong>📍 Location:</strong> SwahiliPot Hub</p>
+                        <p style="margin: 5px 0;"><strong>Date:</strong> ${new Date(booking.booking_date).toDateString()}</p>
+                        <p style="margin: 5px 0;"><strong>Time:</strong> ${booking.start_time} - ${booking.end_time}</p>
+                        <p style="margin: 5px 0;"><strong>Location:</strong> SwahiliPot Hub</p>
                     </div>
 
                     <p>We're excited to host you! See you there.</p>
