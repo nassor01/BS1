@@ -60,14 +60,20 @@ const roomController = {
         try {
             const result = await RoomModel.create(name, space, capacity, amenities);
 
-            res.status(201).json({
+            const newRoom = {
                 id: result.insertId,
                 name,
                 space,
                 capacity,
                 amenities,
                 status: 'Available'
-            });
+            };
+
+            if (req.io) {
+                req.io.emit('room-created', newRoom);
+            }
+
+            res.status(201).json(newRoom);
         } catch (error) {
             console.error('Add room error:', error);
             res.status(500).json({ error: 'Failed to add room' });
@@ -83,6 +89,10 @@ const roomController = {
 
             if (result.affectedRows === 0) {
                 return res.status(404).json({ error: 'Room not found' });
+            }
+
+            if (req.io) {
+                req.io.emit('room-deleted', { id: parseInt(id) });
             }
 
             res.json({ message: 'Room deleted successfully' });

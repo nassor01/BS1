@@ -14,25 +14,11 @@ const mongoSanitize = require('express-mongo-sanitize');
  * Removes keys that could be used for injection attacks
  */
 const sanitizeInput = (req, res, next) => {
-    // Sanitize request body
+    // Sanitize request body only (not query params to preserve date filters, etc.)
     if (req.body) {
         req.body = mongoSanitize.sanitize(req.body, {
             replaceWith: '_',
             allowDots: false
-        });
-    }
-
-    // Sanitize query parameters
-    if (req.query) {
-        req.query = mongoSanitize.sanitize(req.query, {
-            replaceWith: '_'
-        });
-    }
-
-    // Sanitize route parameters
-    if (req.params) {
-        req.params = mongoSanitize.sanitize(req.params, {
-            replaceWith: '_'
         });
     }
 

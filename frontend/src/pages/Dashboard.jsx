@@ -7,6 +7,7 @@ import BookingModal from '../components/modals/BookingModal';
 import Footer from '../components/layout/Footer';
 import roomService from '../services/roomService';
 import bookingService from '../services/bookingService';
+import socketService from '../services/socketService';
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -61,6 +62,32 @@ const Dashboard = () => {
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    useEffect(() => {
+        socketService.connect(
+            () => {},
+            () => {}
+        );
+
+        const handleRoomCreated = (newRoom) => {
+            setRooms(prev => {
+                if (prev.some(r => r.id === newRoom.id)) return prev;
+                return [...prev, newRoom];
+            });
+        };
+
+        const handleRoomDeleted = ({ id }) => {
+            setRooms(prev => prev.filter(r => r.id !== id));
+        };
+
+        socketService.onRoomCreated(handleRoomCreated);
+        socketService.onRoomDeleted(handleRoomDeleted);
+
+        return () => {
+            socketService.offRoomCreated(handleRoomCreated);
+            socketService.offRoomDeleted(handleRoomDeleted);
+        };
+    }, []);
 
     const handleNavigate = (viewId) => {
         if (viewId === 'home' || viewId === 'available') {

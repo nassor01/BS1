@@ -97,8 +97,13 @@ const AdminDashboard = () => {
         }
     };
 
-    const handleLogout = () => {
-        authService.logoutWithNotification();
+    const handleLogout = async () => {
+        try {
+            await authService.logoutWithNotification();
+        } catch (error) {
+            // Force logout locally even if server call fails
+            authService.logout();
+        }
     };
 
     const deleteRoom = async (id) => {

@@ -16,6 +16,11 @@ class AppError extends Error {
 }
 
 const errorHandler = (err, req, res, next) => {
+    // Skip Socket.IO paths - they are handled by the Socket.IO server
+    if (req.path.startsWith('/socket.io')) {
+        return;
+    }
+
     let error = { ...err };
     error.message = err.message;
 
@@ -101,6 +106,10 @@ const asyncHandler = (fn) => (req, res, next) => {
 };
 
 const notFoundHandler = (req, res, next) => {
+    // Skip Socket.IO paths - they are handled by the Socket.IO server
+    if (req.path.startsWith('/socket.io')) {
+        return;
+    }
     const error = new AppError(`Route ${req.originalUrl} not found`, 404, 'NOT_FOUND');
     next(error);
 };

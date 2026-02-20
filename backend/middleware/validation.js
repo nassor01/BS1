@@ -153,6 +153,7 @@ const roomValidation = [
  */
 const idParamValidation = [
     param('id')
+        .optional()
         .isInt({ min: 1 })
         .withMessage('Invalid ID parameter'),
     
@@ -164,6 +165,7 @@ const idParamValidation = [
  */
 const userIdParamValidation = [
     param('userId')
+        .optional()
         .isInt({ min: 1 })
         .withMessage('Invalid user ID parameter'),
     

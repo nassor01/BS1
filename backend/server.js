@@ -164,7 +164,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 function startServer() {
-    const server = app.listen(PORT, () => {
+    server.listen(PORT, () => {
         console.log(`🚀 Server running on port ${PORT}`);
         console.log(`📍 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
     });

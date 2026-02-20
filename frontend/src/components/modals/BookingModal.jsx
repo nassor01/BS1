@@ -8,7 +8,6 @@ const BookingModal = ({ isOpen, onClose, room, type, onSuccess }) => {
         date: new Date().toLocaleDateString('en-CA'),
         startTime: '',
         endTime: '',
-        duration: '',
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -78,10 +77,6 @@ const BookingModal = ({ isOpen, onClose, room, type, onSuccess }) => {
         '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'
     ];
 
-    const durationOptions = [
-        '30 mins', '1 hour', '1.5 hours', '2 hours', '3 hours', 'Full day'
-    ];
-
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop */}
@@ -99,7 +94,7 @@ const BookingModal = ({ isOpen, onClose, room, type, onSuccess }) => {
                                 {isReservation ? 'Reserve' : 'Book'} {room.name}
                             </h2>
                             <p className="text-gray-500 mt-1">
-                                Select a date, time, and duration for your {isReservation ? 'reservation' : 'booking'}
+                                Select a date and time for your {isReservation ? 'reservation' : 'booking'}
                             </p>
                         </div>
                         <button
@@ -175,27 +170,6 @@ const BookingModal = ({ isOpen, onClose, room, type, onSuccess }) => {
                                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
                             </div>
                         </div>
-
-                        {/* Duration Select - Only for Reservation as per mockup */}
-                        {isReservation && (
-                            <div className="space-y-2">
-                                <label className="text-sm font-semibold text-gray-700">Duration</label>
-                                <div className="relative">
-                                    <select
-                                        value={formData.duration}
-                                        onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                                        className="w-full bg-gray-50 border border-transparent rounded-xl px-4 py-3 text-gray-900 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none appearance-none"
-                                        required={isReservation}
-                                    >
-                                        <option value="" disabled>Select duration</option>
-                                        {durationOptions.map(d => (
-                                            <option key={d} value={d}>{d}</option>
-                                        ))}
-                                    </select>
-                                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-                                </div>
-                            </div>
-                        )}
 
                         {/* Footer Buttons */}
                         <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-100">
