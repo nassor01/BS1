@@ -30,10 +30,6 @@ const Dashboard = () => {
         }
     }, [searchParams]);
 
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
     const fetchData = useCallback(async () => {
         setLoading(true);
         setError('');
@@ -61,6 +57,10 @@ const Dashboard = () => {
             setLoading(false);
         }
     }, [selectedDate]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
     const handleNavigate = (viewId) => {
         if (viewId === 'home' || viewId === 'available') {

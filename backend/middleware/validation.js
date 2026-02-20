@@ -160,6 +160,17 @@ const idParamValidation = [
 ];
 
 /**
+ * Validation rules for user ID parameters
+ */
+const userIdParamValidation = [
+    param('userId')
+        .isInt({ min: 1 })
+        .withMessage('Invalid user ID parameter'),
+    
+    handleValidationErrors
+];
+
+/**
  * Validation rules for updating booking status
  */
 const bookingStatusValidation = [
@@ -186,6 +197,7 @@ module.exports = {
     bookingValidation,
     roomValidation,
     idParamValidation,
+    userIdParamValidation,
     bookingStatusValidation,
     handleValidationErrors
 };

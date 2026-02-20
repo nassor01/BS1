@@ -8,6 +8,7 @@ const { authLimiter } = require('../middleware/rateLimiter');
 const {
     signupValidation: validateSignup,
     loginValidation: validateLogin,
+    userIdParamValidation,
     handleValidationErrors
 } = require('../middleware/validation');
 const { body } = require('express-validator');
@@ -61,7 +62,7 @@ router.get('/active-users', authenticate, async (req, res) => {
 });
 
 // POST /disconnect-user/:userId - Disconnect a specific user session (admin only)
-router.post('/disconnect-user/:userId', authenticate, async (req, res) => {
+router.post('/disconnect-user/:userId', authenticate, userIdParamValidation, async (req, res) => {
     try {
         if (req.user.role !== 'admin') {
             return res.status(403).json({ error: 'Admin access required' });

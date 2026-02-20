@@ -4,7 +4,7 @@ const bookingController = require('../controllers/bookingController');
 const analyticsController = require('../controllers/analyticsController');
 const AuditLogger = require('../middleware/auditLogger');
 const { authenticate, authorizeAdmin } = require('../middleware/auth');
-const { bookingValidation, bookingStatusValidation, idParamValidation, handleValidationErrors } = require('../middleware/validation');
+const { bookingValidation, bookingStatusValidation, idParamValidation, userIdParamValidation, handleValidationErrors } = require('../middleware/validation');
 const { bookingLimiter } = require('../middleware/rateLimiter');
 const { body } = require('express-validator');
 
@@ -27,7 +27,7 @@ router.post('/book',
 );
 
 // GET /bookings/user/:userId - Get user's bookings
-router.get('/bookings/user/:userId', authenticate, idParamValidation, handleValidationErrors, bookingController.getUserBookings);
+router.get('/bookings/user/:userId', authenticate, userIdParamValidation, bookingController.getUserBookings);
 
 // ============================================================
 // ADMIN BOOKING ROUTES
