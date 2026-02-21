@@ -16,6 +16,7 @@ const sessionManager = require('./services/sessionManager');
 const authRoutes = require('./routes/authRoutes');
 const roomRoutes = require('./routes/roomRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
+const superAdminRoutes = require('./routes/superAdminRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -117,6 +118,7 @@ app.get('/migrate', (req, res) => {
 app.use('/', authRoutes);
 app.use('/rooms', roomRoutes);
 app.use('/', bookingRoutes);
+app.use('/super-admin', superAdminRoutes);
 
 startReminderCron();
 

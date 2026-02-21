@@ -29,13 +29,18 @@ const AdminLogin = () => {
 
             if (response.success) {
                 const data = response.data;
-                if (data.user.role === 'admin') {
+                if (data.user.role === 'super_admin' || data.user.role === 'admin') {
                     // User data already stored by authService
                     localStorage.setItem('isAdmin', 'true');
-                    navigate('/admin/dashboard');
+                    if (data.user.role === 'super_admin') {
+                        navigate('/super-admin/dashboard');
+                    } else {
+                        navigate('/admin/dashboard');
+                    }
                 } else {
                     setError('Access denied. This portal is for administrators only.');
                 }
+            }
             } else {
                 // Special handling for database connection errors (503)
                 if (response.status === 503) {

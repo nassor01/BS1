@@ -74,10 +74,32 @@ const authorizeAdmin = (req, res, next) => {
         });
     }
 
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
         return res.status(403).json({ 
             error: 'Access denied. Admin privileges required.',
             code: 'ADMIN_REQUIRED'
+        });
+    }
+
+    next();
+};
+
+/**
+ * Authorization Middleware - Super Admin Only
+ * Requires authentication middleware to be run first
+ */
+const authorizeSuperAdmin = (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ 
+            error: 'Authentication required.',
+            code: 'AUTH_REQUIRED'
+        });
+    }
+
+    if (req.user.role !== 'super_admin') {
+        return res.status(403).json({ 
+            error: 'Access denied. Super Admin privileges required.',
+            code: 'SUPER_ADMIN_REQUIRED'
         });
     }
 
@@ -119,5 +141,6 @@ const optionalAuth = (req, res, next) => {
 module.exports = {
     authenticate,
     authorizeAdmin,
+    authorizeSuperAdmin,
     optionalAuth
 };

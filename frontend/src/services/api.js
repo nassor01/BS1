@@ -91,11 +91,23 @@ async function apiFetch(endpoint, options = {}, requiresAuth = false) {
         }
     }
 
-    if (config.body && typeof config.body === 'object') {
+    // Stringify objects and arrays (but not strings or FormData)
+    if (config.body && typeof config.body === 'object' && !(config.body instanceof String) && !(config.body instanceof FormData)) {
         config.body = JSON.stringify(config.body);
     }
 
+    // Debug logging - show what's being sent
+    console.log(`API Request: ${config.method || 'GET'} ${endpoint}`, {
+        hasAuth: !!config.headers['Authorization'],
+        body: config.body
+    });
+
     let response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+
+    // Debug: log status for errors
+    if (!response.ok) {
+        console.log(`API Error: ${response.status} ${endpoint}`);
+    }
 
     if (response.status === 401 && requiresAuth) {
         try {

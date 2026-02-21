@@ -24,10 +24,14 @@ const AuditLogger = {
      */
     async log({ userId = null, action, entityType = null, entityId = null, details = null, ipAddress = null, userAgent = null }) {
         try {
+            // Map details to old_value/new_value for compatibility
             await dbPromise.query(
-                `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details, ip_address, user_agent)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [userId, action, entityType, entityId, details ? JSON.stringify(details) : null, ipAddress, userAgent]
+                `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, old_value, new_value, ip_address, user_agent)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [userId, action, entityType, entityId, 
+                 details ? JSON.stringify(details) : null, 
+                 null, 
+                 ipAddress, userAgent]
             );
         } catch (error) {
             // Never let audit logging failure break the main flow
