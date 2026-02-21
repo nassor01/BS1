@@ -1,5 +1,5 @@
 import React from 'react';
-import { Facebook, Twitter, Instagram, Linkedin, Youtube } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Linkedin, Youtube, Mail, Phone, MapPin } from 'lucide-react';
 import spfLogo from '../../assets/sph-logo (1).png';
 
 const Footer = () => {
@@ -9,28 +9,34 @@ const Footer = () => {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                     {/* Brand Section */}
                     <div className="space-y-4">
-                        <img 
-                            src={spfLogo} 
-                            alt="SPF Logo" 
-                            className="w-24 h-24 object-contain"
-                        />
+                        <div className="flex items-center gap-3">
+                            <img 
+                                src={spfLogo} 
+                                alt="Swahilipot Hub" 
+                                className="w-16 h-16 object-contain"
+                            />
+                            <div>
+                                <h2 className="text-xl font-bold tracking-tight">SWAHILIPOT</h2>
+                                <p className="text-xs text-gray-300">Hub Foundation</p>
+                            </div>
+                        </div>
                         <p className="text-sm text-gray-300 leading-relaxed">
                             Empowering youth through technology, arts, and entrepreneurship across East Africa.
                         </p>
                         <div className="flex space-x-4">
-                            <a href="https://www.facebook.com/Swahilipothub" target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 transition-colors">
+                            <a href="https://www.facebook.com/Swahilipothub" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
                                 <Facebook className="w-5 h-5" />
                             </a>
-                            <a href="https://x.com/swahilipothub" target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 transition-colors">
+                            <a href="https://x.com/swahilipothub" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
                                 <Twitter className="w-5 h-5" />
                             </a>
-                            <a href="https://www.instagram.com/swahilipothub/" target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 transition-colors">
+                            <a href="https://www.instagram.com/swahilipothub/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
                                 <Instagram className="w-5 h-5" />
                             </a>
-                            <a href="https://www.linkedin.com/company/swahilipot-hub/" target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 transition-colors">
+                            <a href="https://www.linkedin.com/company/swahilipot-hub/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
                                 <Linkedin className="w-5 h-5" />
                             </a>
-                            <a href="https://www.youtube.com/@swahilipothubfoundation" target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 transition-colors">
+                            <a href="https://www.youtube.com/@swahilipothubfoundation" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
                                 <Youtube className="w-5 h-5" />
                             </a>
                         </div>
@@ -93,17 +99,21 @@ const Footer = () => {
                     {/* Contact Section */}
                     <div>
                         <h3 className="text-lg font-semibold mb-4">Contact</h3>
-                        <ul className="space-y-2 text-sm text-gray-300">
-                            <li>Opp. Governor's Office, Butterfly House</li>
-                            <li>Mombasa, Kenya</li>
+                        <ul className="space-y-3 text-sm text-gray-300">
+                            <li className="flex items-start gap-2">
+                                <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                <span>Opp. Governor's Office, Butterfly House, Mombasa, Kenya</span>
+                            </li>
                             <li>
-                                <a href="mailto:info@swahilipothub.co.ke" className="hover:text-white transition-colors">
-                                    info@swahilipothub.co.ke
+                                <a href="mailto:info@swahilipothub.co.ke" className="flex items-center gap-2 hover:text-white transition-colors">
+                                    <Mail className="w-4 h-4" />
+                                    <span>info@swahilipothub.co.ke</span>
                                 </a>
                             </li>
                             <li>
-                                <a href="tel:+254114635505" className="hover:text-white transition-colors">
-                                    +254 11 4635505
+                                <a href="tel:+254114635505" className="flex items-center gap-2 hover:text-white transition-colors">
+                                    <Phone className="w-4 h-4" />
+                                    <span>+254 11 4635505</span>
                                 </a>
                             </li>
                         </ul>

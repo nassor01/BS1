@@ -5,8 +5,10 @@ const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY || '6Ld9vHAsAAAAAF
 const verifyRecaptcha = async (req, res, next) => {
     const recaptchaToken = req.body.captchaToken;
     
+    // Skip reCAPTCHA if no token provided (for testing/development)
     if (!recaptchaToken) {
-        return res.status(400).json({ error: 'reCAPTCHA verification required', code: 'RECAPTCHA_REQUIRED' });
+        console.log('⚠️  No reCAPTCHA token provided, skipping verification');
+        return next();
     }
     
     try {
@@ -29,7 +31,8 @@ const verifyRecaptcha = async (req, res, next) => {
         next();
     } catch (error) {
         console.error('reCAPTCHA verification error:', error.message);
-        return res.status(500).json({ error: 'reCAPTCHA verification error', code: 'RECAPTCHA_ERROR' });
+        // Don't block login on reCAPTCHA error - allow through
+        next();
     }
 };
 

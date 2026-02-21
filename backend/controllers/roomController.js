@@ -66,7 +66,10 @@ const roomController = {
                 space,
                 capacity,
                 amenities,
-                status: 'Available'
+                status: 'Available',
+                createdBy: req.user.email,
+                createdByRole: req.user.role,
+                createdAt: new Date().toISOString()
             };
 
             if (req.io) {
@@ -77,6 +80,43 @@ const roomController = {
         } catch (error) {
             console.error('Add room error:', error);
             res.status(500).json({ error: 'Failed to add room' });
+        }
+    },
+
+    // DELETE ROOM (Admin only)
+    async deleteRoom(req, res) {
+        const { id } = req.params;
+
+        try {
+            // Get room details before deleting
+            const rooms = await RoomModel.findById(id);
+            if (rooms.length === 0) {
+                return res.status(404).json({ error: 'Room not found' });
+            }
+            const deletedRoom = rooms[0];
+
+            const result = await RoomModel.deleteById(id);
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ error: 'Room not found' });
+            }
+
+            const deletedRoomInfo = {
+                id: parseInt(id),
+                name: deletedRoom.name,
+                deletedBy: req.user.email,
+                deletedByRole: req.user.role,
+                deletedAt: new Date().toISOString()
+            };
+
+            if (req.io) {
+                req.io.emit('room-deleted', deletedRoomInfo);
+            }
+
+            res.json({ message: 'Room deleted successfully', deletedRoom: deletedRoomInfo });
+        } catch (error) {
+            console.error('Delete room error:', error);
+            res.status(500).json({ error: 'Failed to delete room' });
         }
     },
 

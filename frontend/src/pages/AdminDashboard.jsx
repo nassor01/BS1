@@ -133,6 +133,7 @@ const AdminDashboard = () => {
                 const newRoom = await res.json();
                 setRooms(prev => [...prev, newRoom]);
                 setIsModalOpen(false);
+                alert(`Room "${newRoom.name}" added successfully!`);
             } else {
                 const data = await res.json();
                 alert(data.error || 'Failed to add room');

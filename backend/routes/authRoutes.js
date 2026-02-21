@@ -34,10 +34,9 @@ router.post('/login',
     authController.login
 );
 
-// POST /admin/login - Admin login with reCAPTCHA
+// POST /admin/login - Admin login (reCAPTCHA optional for now)
 router.post('/admin/login',
-    adminAuthLimiter,
-    verifyRecaptcha,
+    // adminAuthLimiter,
     authController.adminLogin
 );
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Users, FileText, Settings, BarChart3, LogOut, ChevronLeft, ChevronRight, UserCheck, UserX, AlertCircle, Download, Search, X } from 'lucide-react';
 import superAdminService from '../services/superAdminService';
+import socketService from '../services/socketService';
 import Footer from '../components/layout/Footer';
 
 const SuperAdminDashboard = () => {
@@ -35,6 +36,27 @@ const SuperAdminDashboard = () => {
         }
         setCurrentUser(user);
         fetchData();
+
+        // Socket connection for real-time updates
+        socketService.connect(() => {}, () => {});
+
+        const handleRoomCreated = (newRoom) => {
+            alert(`New room added: ${newRoom.name} by ${newRoom.createdBy}`);
+            fetchData();
+        };
+
+        const handleRoomDeleted = (roomInfo) => {
+            alert(`Room deleted: ${roomInfo.name} by ${roomInfo.deletedBy}`);
+            fetchData();
+        };
+
+        socketService.onRoomCreated(handleRoomCreated);
+        socketService.onRoomDeleted(handleRoomDeleted);
+
+        return () => {
+            socketService.offRoomCreated(handleRoomCreated);
+            socketService.offRoomDeleted(handleRoomDeleted);
+        };
     }, [navigate]);
 
     const fetchData = async () => {

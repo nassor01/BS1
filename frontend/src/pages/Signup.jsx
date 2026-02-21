@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, Building2, Building, Eye, EyeOff, Wand2 } from 'lucide-react';
 import authService from '../services/authService';
+import spfLogo from '../assets/sph-logo (1).png';
 
 const Signup = () => {
     const navigate = useNavigate();
@@ -86,16 +87,18 @@ const Signup = () => {
     };
 
     return (
-        <div className="min-h-screen bg-blue-50 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
                 <div className="flex flex-col items-center mb-8">
-                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                        <User className="text-blue-600 w-8 h-8" />
-                    </div>
-                    <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                        Create an Account <User className="w-5 h-5 text-blue-500" />
+                    <img 
+                        src={spfLogo} 
+                        alt="Swahilipot Hub" 
+                        className="w-24 h-24 mb-2 object-contain"
+                    />
+                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+                        Create Account
                     </h1>
-                    <p className="text-gray-500 mt-2">Sign up to book rooms at Swahilipot</p>
+                    <p className="text-gray-500 mt-1 text-sm">Join Swahilipot Hub</p>
                 </div>
 
                 {error && (

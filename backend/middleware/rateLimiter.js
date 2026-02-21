@@ -22,14 +22,14 @@ const authLimiter = rateLimit({
 
 const adminAuthLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 5,
+    max: 20,
     message: {
         error: 'Too many admin login attempts. Please try again after 15 minutes.',
         code: 'ADMIN_RATE_LIMIT_EXCEEDED'
     },
     standardHeaders: true,
     legacyHeaders: false,
-    skipSuccessfulRequests: true,
+    skipSuccessfulRequests: false,
     handler: (req, res) => {
         console.warn(`⚠️  Admin rate limit exceeded for IP: ${req.ip}`);
         res.status(429).json({

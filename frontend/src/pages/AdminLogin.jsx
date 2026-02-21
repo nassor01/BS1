@@ -121,18 +121,18 @@ const AdminLogin = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
                 <div className="flex flex-col items-center mb-8">
                     <img 
                         src={spfLogo} 
-                        alt="SPF Logo" 
-                        className="w-32 h-32 mb-4 object-contain"
+                        alt="Swahilipot Hub" 
+                        className="w-24 h-24 mb-2 object-contain"
                     />
-                    <h1 className="text-2xl font-bold text-gray-900">
+                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
                         Admin Portal
                     </h1>
-                    <p className="text-gray-500 mt-2">Sign in to manage rooms and users</p>
+                    <p className="text-gray-500 mt-1 text-sm">Sign in to manage rooms</p>
                 </div>
 
                 {error && (

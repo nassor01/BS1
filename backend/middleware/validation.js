@@ -137,13 +137,18 @@ const roomValidation = [
         .withMessage('Space must be between 2 and 100 characters'),
     
     body('capacity')
+        .optional()
         .isInt({ min: 1, max: 1000 })
         .withMessage('Capacity must be between 1 and 1000'),
     
     body('amenities')
         .optional()
-        .isArray()
-        .withMessage('Amenities must be an array'),
+        .custom((value) => {
+            if (value && !Array.isArray(value)) {
+                throw new Error('Amenities must be an array');
+            }
+            return true;
+        }),
     
     handleValidationErrors
 ];
