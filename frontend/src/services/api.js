@@ -58,7 +58,7 @@ const refreshAccessToken = async () => {
         }
 
         const data = await response.json();
-        saveTokens(data.accessToken);
+        saveTokens(data.accessToken, data.refreshToken);
         return data.accessToken;
     } catch (error) {
         clearAuth();
@@ -83,7 +83,8 @@ async function apiFetch(endpoint, options = {}, requiresAuth = false) {
         ...options,
     };
 
-    if (requiresAuth || getAccessToken()) {
+    // Only attach token if authentication is explicitly required
+    if (requiresAuth) {
         const token = getAccessToken();
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`;

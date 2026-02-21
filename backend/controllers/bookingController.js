@@ -3,17 +3,31 @@ const RoomModel = require('../models/roomModel');
 const UserModel = require('../models/userModel');
 const sendMail = require('../utils/mailer');
 
+const formatDateDisplay = (dateStr) => {
+    const date = new Date(dateStr + 'T00:00:00');
+    return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    });
+};
+
 const bookingController = {
     // BOOK ROOM
     async createBooking(req, res) {
-        const { userId, roomId, date, startTime, endTime, type } = req.body;
-
-        // Validate required fields
-        if (!userId || !roomId || !date || !startTime || !endTime) {
-            return res.status(400).json({ error: 'All fields are required' });
-        }
+        const { userId, roomId, date, startTime, endTime, type, dates } = req.body;
 
         const bookingType = type === 'reservation' ? 'reservation' : 'booking';
+
+        // For reservations, accept either single date or multiple dates array
+        const dateList = bookingType === 'reservation' && dates && Array.isArray(dates) && dates.length > 0
+            ? dates
+            : (date ? [date] : []);
+
+        if (!userId || !roomId || dateList.length === 0 || !startTime || !endTime) {
+            return res.status(400).json({ error: 'All fields are required' });
+        }
 
         try {
             // Check if room exists
@@ -25,16 +39,6 @@ const bookingController = {
 
             const room = rooms[0];
 
-            // Check if room is already booked for this date/time
-            const existingBookings = await BookingModel.findConflicting(roomId, date, startTime, endTime);
-
-            if (existingBookings.length > 0) {
-                return res.status(409).json({
-                    error: 'Room is already booked for this time slot',
-                    conflictingBooking: existingBookings[0]
-                });
-            }
-
             // Get user details
             const users = await UserModel.findById(userId);
 
@@ -44,10 +48,66 @@ const bookingController = {
 
             const user = users[0];
 
-            // Create booking
-            const result = await BookingModel.create(userId, roomId, date, startTime, endTime, bookingType);
+            // Check for conflicts and get queue positions
+            const conflicts = [];
+            const queueInfo = [];
 
-            console.log(`✅ ${bookingType === 'reservation' ? 'Reservation' : 'Booking'} created: Room ${room.name} by ${user.email}`);
+            for (const d of dateList) {
+                const existingBookings = await BookingModel.findConflicting(roomId, d, startTime, endTime);
+                
+                // Filter to only pending bookings for queue position
+                const pendingBookings = existingBookings.filter(b => b.status === 'pending');
+                
+                if (pendingBookings.length > 0 || existingBookings.some(b => b.status === 'confirmed')) {
+                    // There's a conflict - get queue position
+                    const queue = await BookingModel.getQueuePosition(roomId, d, startTime, endTime);
+                    queueInfo.push({
+                        date: d,
+                        queuePosition: queue.length + 1,
+                        hasConfirmed: existingBookings.some(b => b.status === 'confirmed')
+                    });
+                    conflicts.push({
+                        date: d,
+                        hasConfirmed: existingBookings.some(b => b.status === 'confirmed'),
+                        queuePosition: queue.length + 1
+                    });
+                }
+            }
+
+            // If booking type and there are confirmed conflicts, reject
+            if (bookingType === 'booking') {
+                const confirmedConflicts = conflicts.filter(c => c.hasConfirmed);
+                if (confirmedConflicts.length > 0) {
+                    return res.status(409).json({
+                        error: 'Room is already confirmed for this time slot',
+                        conflictingDates: confirmedConflicts.map(c => c.date)
+                    });
+                }
+            }
+
+            // Create bookings for all dates
+            const bookingsToCreate = dateList.map(d => ({
+                userId,
+                roomId,
+                date: d,
+                startTime,
+                endTime,
+                type: bookingType
+            }));
+
+            const results = await BookingModel.createMany(bookingsToCreate);
+
+            console.log(`✅ ${bookingType === 'reservation' ? 'Reservation' : 'Booking'} created: Room ${room.name} by ${user.email} for ${dateList.length} date(s)`);
+
+            // Prepare queue position response
+            const queuePositions = {};
+            for (const qi of queueInfo) {
+                queuePositions[qi.date] = qi.queuePosition;
+            }
+
+            // Build dates HTML for email
+            const datesHtml = dateList.map(d => `<li style="margin: 5px 0;">${formatDateDisplay(d)}</li>`).join('');
+            const datesText = dateList.map(d => formatDateDisplay(d)).join('\n');
 
             // Send email to admin
             const adminEmail = process.env.ADMIN_EMAIL;
@@ -55,7 +115,7 @@ const bookingController = {
                 sendMail(
                     adminEmail,
                     `New Room ${bookingType === 'reservation' ? 'Reservation' : 'Booking'} Request`,
-                    `New ${bookingType} request:\n\nRoom: ${room.name}\nUser: ${user.full_name} (${user.email})\nDate: ${date}\nTime: ${startTime} - ${endTime}`,
+                    `New ${bookingType} request:\n\nRoom: ${room.name}\nUser: ${user.full_name} (${user.email})\nDates:\n${datesText}\nTime: ${startTime} - ${endTime}`,
                     `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
                         <h2 style="color: #0B4F6C;">New Room ${bookingType === 'reservation' ? 'Reservation' : 'Booking'} Request</h2>
@@ -74,8 +134,10 @@ const bookingController = {
                                 <td style="padding: 10px; border-bottom: 1px solid #eee;">${user.email}</td>
                             </tr>
                             <tr>
-                                <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Date:</strong></td>
-                                <td style="padding: 10px; border-bottom: 1px solid #eee;">${date}</td>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee; vertical-align: top;"><strong>Date${dateList.length > 1 ? 's' : ''}:</strong></td>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;">
+                                    <ul style="margin: 0; padding-left: 20px;">${datesHtml}</ul>
+                                </td>
                             </tr>
                             <tr>
                                 <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Time:</strong></td>
@@ -94,28 +156,48 @@ const bookingController = {
                 );
             }
 
+            // Build queue notification HTML if needed
+            let queueNotificationHtml = '';
+            let queueNotificationText = '';
+            if (Object.keys(queuePositions).length > 0) {
+                const queueItems = Object.entries(queuePositions).map(([d, pos]) => 
+                    `<li style="margin: 5px 0;"><strong>${formatDateDisplay(d)}:</strong> Position #${pos} in queue</li>`
+                ).join('');
+                queueNotificationHtml = `
+                    <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #ffc107;">
+                        <p style="margin: 0 0 10px 0; font-weight: bold;">⚠️ Queue Position Notice:</p>
+                        <ul style="margin: 0; padding-left: 20px;">${queueItems}</ul>
+                        <p style="margin: 10px 0 0 0; font-size: 14px;">Someone else has already requested this room for the above date(s). Your request has been added to the queue and will be processed in order.</p>
+                    </div>
+                `;
+                queueNotificationText = `\n\nNote: You are in the queue for the following dates:\n${Object.entries(queuePositions).map(([d, pos]) => `- ${formatDateDisplay(d)}: Position #${pos}`).join('\n')}`;
+            }
+
             // Send confirmation email to user
             sendMail(
                 user.email,
                 `Room ${bookingType === 'reservation' ? 'Reservation' : 'Booking'} Confirmation`,
-                `Hello ${user.full_name},\n\nYour ${bookingType} request has been received!\n\nRoom: ${room.name}\nDate: ${date}\nTime: ${startTime} - ${endTime}\n\nYou will receive a confirmation once reviewed.\n\nBest regards,\nSwahiliPot Hub Team`,
+                `Hello ${user.full_name},\n\nYour ${bookingType} request has been received!\n\nRoom: ${room.name}\nDates:\n${datesText}\nTime: ${startTime} - ${endTime}\n\nYou will receive a confirmation once reviewed.${queueNotificationText}\n\nBest regards,\nSwahilipot Hub Team`,
                 `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
                     <h2 style="color: #0B4F6C; border-bottom: 2px solid #0B4F6C; padding-bottom: 10px;">${bookingType === 'reservation' ? 'Reservation' : 'Booking'} Received!</h2>
                     <p>Hello <strong>${user.full_name}</strong>,</p>
-                    <p>Thank you for choosing SwahiliPot Hub. Your request for a room ${bookingType} is being processed.</p>
+                    <p>Thank you for choosing Swahilipot Hub. Your request for a room ${bookingType} is being processed.</p>
                     
                     <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
                         <h3 style="margin-top: 0; color: #333;">Summary:</h3>
                         <p style="margin: 5px 0;"><strong>Space:</strong> ${room.name}</p>
-                        <p style="margin: 5px 0;"><strong>Date:</strong> ${date}</p>
+                        <p style="margin: 5px 0; vertical-align: top;"><strong>Date${dateList.length > 1 ? 's' : ''}:</strong></p>
+                        <ul style="margin: 5px 0; padding-left: 30px;">${datesHtml}</ul>
                         <p style="margin: 5px 0;"><strong>Time Slot:</strong> ${startTime} - ${endTime}</p>
                         <p style="margin: 5px 0;"><strong>Status:</strong> Pending Approval</p>
                     </div>
 
+                    ${queueNotificationHtml}
+
                     <p>Our administration team will review your request and get back to you shortly.</p>
                     <div style="margin-top: 30px; font-size: 12px; color: #777; border-top: 1px solid #eee; padding-top: 10px;">
-                        This is an automated message from SwahiliPot Hub Room Booking System.
+                        This is an automated message from Swahilipot Hub Room Booking System.
                     </div>
                 </div>
                 `
@@ -124,13 +206,14 @@ const bookingController = {
             res.status(201).json({
                 message: `${bookingType === 'reservation' ? 'Reservation' : 'Booking'} created successfully`,
                 booking: {
-                    id: result.insertId,
+                    ids: results.map(r => r.id),
                     roomName: room.name,
-                    date,
+                    dates: dateList,
                     startTime,
                     endTime,
                     type: bookingType,
-                    status: 'pending'
+                    status: 'pending',
+                    queuePositions
                 }
             });
 

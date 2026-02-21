@@ -98,6 +98,59 @@ const BookingModel = {
             [dateStr, timeStr, futureTimeStr]
         );
         return rows;
+    },
+
+    async getQueuePosition(roomId, date, startTime, endTime) {
+        const [rows] = await dbPromise.query(
+            `SELECT id, user_id FROM bookings 
+             WHERE room_id = ? 
+             AND booking_date = ? 
+             AND status = 'pending'
+             AND (
+                 (start_time <= ? AND end_time > ?) OR
+                 (start_time < ? AND end_time >= ?) OR
+                 (start_time >= ? AND end_time <= ?)
+             )
+             ORDER BY created_at ASC`,
+            [roomId, date, startTime, startTime, endTime, endTime, startTime, endTime]
+        );
+        return rows;
+    },
+
+    async findPendingByRoomDate(roomId, date) {
+        const [rows] = await dbPromise.query(
+            `SELECT b.*, u.full_name, u.email 
+             FROM bookings b
+             JOIN users u ON b.user_id = u.id
+             WHERE b.room_id = ? 
+             AND b.booking_date = ? 
+             AND b.status = 'pending'
+             ORDER BY b.created_at ASC`,
+            [roomId, date]
+        );
+        return rows;
+    },
+
+    async createMany(bookings) {
+        const connection = await dbPromise.getConnection();
+        try {
+            await connection.beginTransaction();
+            const results = [];
+            for (const booking of bookings) {
+                const [result] = await connection.query(
+                    'INSERT INTO bookings (user_id, room_id, booking_date, start_time, end_time, type, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                    [booking.userId, booking.roomId, booking.date, booking.startTime, booking.endTime, booking.type, 'pending']
+                );
+                results.push({ ...booking, id: result.insertId });
+            }
+            await connection.commit();
+            return results;
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
     }
 };
 
