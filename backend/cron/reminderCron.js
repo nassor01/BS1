@@ -36,7 +36,7 @@ function startReminderCron() {
                         <p>We look forward to seeing you!</p>
                     </div>
                     `
-                );
+                ).catch(err => console.error('Failed to send reminder email:', err));
             }
         } catch (error) {
             console.error('Reminder cron error:', error);

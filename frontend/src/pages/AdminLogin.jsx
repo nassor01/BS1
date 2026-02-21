@@ -40,7 +40,6 @@ const AdminLogin = () => {
                 } else {
                     setError('Access denied. This portal is for administrators only.');
                 }
-            }
             } else {
                 // Special handling for database connection errors (503)
                 if (response.status === 503) {

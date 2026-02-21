@@ -1,6 +1,7 @@
 const BookingModel = require('../models/bookingModel');
 const RoomModel = require('../models/roomModel');
 const UserModel = require('../models/userModel');
+const SettingsModel = require('../models/settingsModel');
 const sendMail = require('../utils/mailer');
 
 const formatDateDisplay = (dateStr) => {
@@ -19,6 +20,20 @@ const bookingController = {
         const { userId, roomId, date, startTime, endTime, type, dates } = req.body;
 
         const bookingType = type === 'reservation' ? 'reservation' : 'booking';
+
+        // Check if maintenance mode is enabled
+        try {
+            const isMaintenanceMode = await SettingsModel.isMaintenanceMode();
+            if (isMaintenanceMode) {
+                return res.status(503).json({ 
+                    error: 'System is under maintenance. Bookings are currently disabled. Please try again later.',
+                    code: 'MAINTENANCE_MODE'
+                });
+            }
+        } catch (err) {
+            console.error('Error checking maintenance mode:', err);
+            // Continue if we can't check maintenance mode
+        }
 
         // For reservations, accept either single date or multiple dates array
         const dateList = bookingType === 'reservation' && dates && Array.isArray(dates) && dates.length > 0
@@ -153,7 +168,7 @@ const bookingController = {
                         </div>
                     </div>
                     `
-                );
+                ).catch(err => console.error('Failed to send admin notification email:', err));
             }
 
             // Build queue notification HTML if needed
@@ -201,7 +216,7 @@ const bookingController = {
                     </div>
                 </div>
                 `
-            );
+            ).catch(err => console.error('Failed to send confirmation email:', err));
 
             res.status(201).json({
                 message: `${bookingType === 'reservation' ? 'Reservation' : 'Booking'} created successfully`,
@@ -285,7 +300,7 @@ const bookingController = {
                 subject,
                 `Your booking status has been updated to: ${status}`,
                 htmlContent
-            );
+            ).catch(err => console.error('Failed to send status update email:', err));
 
             res.json({ message: `Booking ${status} successfully`, bookingId: id, newStatus: status });
 

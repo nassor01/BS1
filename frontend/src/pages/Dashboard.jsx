@@ -272,8 +272,8 @@ const Dashboard = () => {
                                 <div className="mb-6">
                                     <p className="text-sm font-medium text-gray-900 mb-2">Amenities:</p>
                                     <div className="flex flex-wrap gap-2">
-                                        {room.amenities?.map((amenity, index) => (
-                                            <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
+                                        {room.amenities?.map((amenity) => (
+                                            <span key={amenity} className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
                                                 {amenity}
                                             </span>
                                         ))}

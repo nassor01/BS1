@@ -87,7 +87,8 @@ app.use((req, res, next) => {
 
 app.get('/health', async (req, res) => {
     try {
-        await db.query('SELECT 1');
+        const { dbPromise } = require('./config/db');
+        await dbPromise.query('SELECT 1');
         res.json({
             status: 'ok',
             database: 'connected',
