@@ -411,7 +411,7 @@ const authController = {
             const user = users[0];
             
             // Generate 6-digit PIN
-            const resetPin = Math.floor(100000 + Math.random() * 900000).toString();
+            const resetPin = crypto.randomInt(100000, 999999).toString();
             const resetExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
             
             await UserModel.setPasswordResetToken(user.id, resetPin, resetExpires);
@@ -430,7 +430,7 @@ const authController = {
                 </div>`
             ).catch(err => console.error('Failed to send forgot password email:', err.message));
 
-            console.log(`📧 Password reset PIN sent to: ${email} (PIN: ${resetPin})`);
+            console.log(`📧 Password reset PIN sent to: ${email}`);
             res.json({ message: 'If that email is registered, a password reset PIN has been sent.' });
 
         } catch (error) {

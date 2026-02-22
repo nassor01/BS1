@@ -322,8 +322,12 @@ const bookingController = {
     },
 
     // GET USER BOOKINGS
-    async getUserBookings(req, res) {
+async getUserBookings(req, res) {
         const { userId } = req.params;
+
+        if (req.user.id !== parseInt(userId)) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
 
         try {
             const bookings = await BookingModel.findByUserId(userId);

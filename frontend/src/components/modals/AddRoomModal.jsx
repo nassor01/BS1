@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Building2, Users, Layers, Star } from 'lucide-react';
 
-const AddRoomModal = ({ isOpen, onClose, onAdd }) => {
+const AddRoomModal = ({ isOpen, onClose, onAdd, room, onUpdate }) => {
     const [roomData, setRoomData] = useState({
         name: '',
         space: '',
@@ -9,20 +9,42 @@ const AddRoomModal = ({ isOpen, onClose, onAdd }) => {
         amenities: '',
     });
 
+    const isEditMode = !!room;
+
+    useEffect(() => {
+        if (room) {
+            setRoomData({
+                name: room.name || '',
+                space: room.space || '',
+                capacity: room.capacity || '',
+                amenities: Array.isArray(room.amenities) ? room.amenities.join(', ') : room.amenities || '',
+            });
+        } else {
+            setRoomData({ name: '', space: '', capacity: '', amenities: '' });
+        }
+    }, [room, isOpen]);
+
     if (!isOpen) return null;
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        const newRoom = {
-            id: Date.now(),
+        const roomPayload = {
             name: roomData.name,
             space: roomData.space,
             capacity: parseInt(roomData.capacity),
             amenities: roomData.amenities.split(',').map(a => a.trim()).filter(a => a !== ''),
-            status: 'Available',
-            type: 'available'
         };
-        onAdd(newRoom);
+
+        if (isEditMode && onUpdate) {
+            onUpdate({ ...roomPayload, id: room.id });
+        } else if (onAdd) {
+            onAdd({
+                id: Date.now(),
+                ...roomPayload,
+                status: 'Available',
+                type: 'available'
+            });
+        }
         setRoomData({ name: '', space: '', capacity: '', amenities: '' });
         onClose();
     };
@@ -32,7 +54,7 @@ const AddRoomModal = ({ isOpen, onClose, onAdd }) => {
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose}></div>
             <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 animate-in fade-in zoom-in duration-200">
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-gray-900">Add New Room</h2>
+                    <h2 className="text-xl font-bold text-gray-900">{isEditMode ? 'Edit Room' : 'Add New Room'}</h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X /></button>
                 </div>
 
@@ -99,7 +121,7 @@ const AddRoomModal = ({ isOpen, onClose, onAdd }) => {
 
                     <div className="pt-4">
                         <button type="submit" className="w-full bg-red-600 text-white font-bold py-2.5 rounded-lg hover:bg-red-700 transition-colors shadow-lg shadow-red-200">
-                            Save Room
+                            {isEditMode ? 'Update Room' : 'Save Room'}
                         </button>
                     </div>
                 </form>

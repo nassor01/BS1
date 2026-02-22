@@ -36,7 +36,7 @@ router.post('/login',
 
 // POST /admin/login - Admin login (reCAPTCHA optional for now)
 router.post('/admin/login',
-    // adminAuthLimiter,
+    adminAuthLimiter,
     authController.adminLogin
 );
 
@@ -57,10 +57,20 @@ router.post('/logout', authenticate, async (req, res) => {
 // GET /active-users - Get all active users (admin only)
 router.get('/active-users', authenticate, async (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
+        const userRole = req.user.role;
+        
+        // Only admin and super_admin can access this
+        if (userRole !== 'admin' && userRole !== 'super_admin') {
             return res.status(403).json({ error: 'Admin access required' });
         }
-        const activeUsers = sessionManager.getActiveSessions();
+        
+        let activeUsers = sessionManager.getActiveSessions();
+        
+        // If admin (not super_admin), filter out super admins and other admins from the list
+        if (userRole === 'admin') {
+            activeUsers = activeUsers.filter(user => user.role === 'user');
+        }
+        
         res.json({ activeUsers });
     } catch (error) {
         console.error('Get active users error:', error);
@@ -71,10 +81,36 @@ router.get('/active-users', authenticate, async (req, res) => {
 // POST /disconnect-user/:userId - Disconnect a specific user session (admin only)
 router.post('/disconnect-user/:userId', authenticate, userIdParamValidation, async (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
+        const adminRole = req.user.role;
+        
+        // Only admin and super_admin can disconnect users
+        if (adminRole !== 'admin' && adminRole !== 'super_admin') {
             return res.status(403).json({ error: 'Admin access required' });
         }
+        
         const userIdToDisconnect = parseInt(req.params.userId);
+        
+        // Get the target user's role from database
+        const [users] = await require('../config/db').dbPromise.query(
+            'SELECT id, email, role FROM users WHERE id = ?',
+            [userIdToDisconnect]
+        );
+        
+        if (users.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        const targetUser = users[0];
+        
+        // Admin cannot disconnect super_admin
+        if (adminRole === 'admin' && targetUser.role === 'super_admin') {
+            return res.status(403).json({ error: 'Cannot disconnect super admin' });
+        }
+        
+        // Admin cannot disconnect other admins
+        if (adminRole === 'admin' && targetUser.role === 'admin') {
+            return res.status(403).json({ error: 'Cannot disconnect other admin' });
+        }
         
         // Cannot disconnect yourself
         if (userIdToDisconnect === req.user.id) {

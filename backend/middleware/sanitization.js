@@ -109,15 +109,28 @@ const validateRequestSize = (req, res, next) => {
     const contentLength = parseInt(req.headers['content-length'] || '0');
     const maxSize = 100 * 1024; // 100KB default
     
-    // Allow larger size for specific endpoints
-    const allowedEndpoints = {
-        '/signup': 10 * 1024,      // 10KB for signup
-        '/book': 10 * 1024,       // 10KB for booking
-        '/rooms': 50 * 1024       // 50KB for room creation with amenities
-    };
+    // Determine the endpoint path (include baseUrl for mounted routes)
+    const baseUrl = req.baseUrl || '';
+    const path = req.path;
+    const fullPath = baseUrl + path; // e.g., '/rooms/1'
+    
+    let limit = maxSize;
 
-    const endpoint = req.path;
-    const limit = allowedEndpoints[endpoint] || maxSize;
+    // Allow larger payload for POST/PUT/DELETE on specific endpoints
+    if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
+        // Room endpoints need more space for amenities JSON
+        if (fullPath.startsWith('/rooms')) {
+            limit = 50 * 1024;
+        }
+        // Booking endpoint
+        else if (fullPath === '/book' || fullPath.startsWith('/book')) {
+            limit = 10 * 1024;
+        }
+        // Signup endpoint
+        else if (fullPath === '/signup') {
+            limit = 10 * 1024;
+        }
+    }
 
     if (contentLength > limit) {
         console.warn(`⚠️  Request size exceeded: ${contentLength} bytes (max: ${limit})`);

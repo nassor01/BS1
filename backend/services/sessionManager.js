@@ -32,6 +32,7 @@ const sessionManager = {
     getActiveSessions() {
         return Array.from(activeSessions.values()).map(session => ({
             id: session.userId,
+            userId: session.userId,
             email: session.email,
             fullName: session.fullName,
             role: session.role,

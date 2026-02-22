@@ -33,8 +33,10 @@ const signupValidation = [
         .withMessage('Email must not exceed 255 characters'),
     
     body('password')
-        .isLength({ min: 6 })
-        .withMessage('Password must be at least 6 characters long'),
+        .isLength({ min: 8 })
+        .withMessage('Password must be at least 8 characters')
+        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/)
+        .withMessage('Password must contain uppercase, lowercase, number and special character'),
     
     body('fullName')
         .trim()
@@ -125,30 +127,18 @@ const roomValidation = [
     body('name')
         .trim()
         .notEmpty()
-        .withMessage('Room name is required')
-        .isLength({ min: 2, max: 100 })
-        .withMessage('Room name must be between 2 and 100 characters'),
+        .withMessage('Room name is required'),
     
     body('space')
         .trim()
         .notEmpty()
-        .withMessage('Space/location is required')
-        .isLength({ min: 2, max: 100 })
-        .withMessage('Space must be between 2 and 100 characters'),
+        .withMessage('Space/location is required'),
     
     body('capacity')
-        .optional()
-        .isInt({ min: 1, max: 1000 })
-        .withMessage('Capacity must be between 1 and 1000'),
+        .optional(),
     
     body('amenities')
-        .optional()
-        .custom((value) => {
-            if (value && !Array.isArray(value)) {
-                throw new Error('Amenities must be an array');
-            }
-            return true;
-        }),
+        .optional(),
     
     handleValidationErrors
 ];

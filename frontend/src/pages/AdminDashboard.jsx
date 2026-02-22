@@ -14,6 +14,7 @@ const AdminDashboard = () => {
     const [bookings, setBookings] = useState([]);
     const [activeSessions, setActiveSessions] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingRoom, setEditingRoom] = useState(null);
     const [activeTab, setActiveTab] = useState('rooms'); // 'rooms', 'users', or 'bookings'
     const [loading, setLoading] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
@@ -92,10 +93,20 @@ const AdminDashboard = () => {
     };
 
     const removeSession = async (id) => {
+        if (!window.confirm('Are you sure you want to disconnect this user?')) return;
+        
         try {
-            await authService.disconnectUser(id);
+            const result = await authService.disconnectUser(id);
+            if (result.success) {
+                // Remove from local state immediately
+                setActiveSessions(prev => prev.filter(s => s.id !== id));
+                alert('User disconnected successfully');
+            } else {
+                alert(result.error || 'Failed to disconnect user');
+            }
         } catch (err) {
             console.error('Error disconnecting user:', err);
+            alert('Error disconnecting user');
         }
     };
 
@@ -133,6 +144,7 @@ const AdminDashboard = () => {
                 const newRoom = await res.json();
                 setRooms(prev => [...prev, newRoom]);
                 setIsModalOpen(false);
+                setEditingRoom(null);
                 alert(`Room "${newRoom.name}" added successfully!`);
             } else {
                 const data = await res.json();
@@ -141,6 +153,30 @@ const AdminDashboard = () => {
         } catch (err) {
             alert('Error connecting to server');
         }
+    };
+
+    const handleUpdateRoom = async (roomData) => {
+        try {
+            const res = await roomService.updateRoom(roomData.id, roomData);
+
+            if (res.ok) {
+                const updatedRoom = await res.json();
+                setRooms(prev => prev.map(r => r.id === updatedRoom.id ? updatedRoom : r));
+                setIsModalOpen(false);
+                setEditingRoom(null);
+                alert(`Room "${updatedRoom.name}" updated successfully!`);
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Failed to update room');
+            }
+        } catch (err) {
+            alert('Error connecting to server');
+        }
+    };
+
+    const openEditModal = (room) => {
+        setEditingRoom(room);
+        setIsModalOpen(true);
     };
 
     const handleUpdateStatus = async (bookingId, newStatus) => {
@@ -180,8 +216,10 @@ const AdminDashboard = () => {
         <div className="min-h-screen bg-gray-50 flex flex-col">
             <AddRoomModal
                 isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+                onClose={() => { setIsModalOpen(false); setEditingRoom(null); }}
                 onAdd={handleAddRoom}
+                room={editingRoom}
+                onUpdate={handleUpdateRoom}
             />
             {/* Admin Header */}
             <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-8 sticky top-0 z-10">
@@ -267,7 +305,10 @@ const AdminDashboard = () => {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <button className="text-blue-600 hover:text-blue-900 mr-4">
+                                            <button 
+                                                onClick={() => openEditModal(room)}
+                                                className="text-blue-600 hover:text-blue-900 mr-4"
+                                            >
                                                 <Edit className="w-4 h-4" />
                                             </button>
                                             <button

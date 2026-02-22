@@ -26,4 +26,12 @@ router.delete('/:id',
     roomController.deleteRoom
 );
 
+router.put('/:id', 
+    authenticate, 
+    authorizeAdmin, 
+    idParamValidation,
+    AuditLogger.middleware('ROOM_UPDATED', 'room'),
+    roomController.updateRoom
+);
+
 module.exports = router;

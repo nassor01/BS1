@@ -38,6 +38,14 @@ const RoomModel = {
         await dbPromise.query('DELETE FROM bookings WHERE room_id = ?', [id]);
         const [result] = await dbPromise.query('DELETE FROM rooms WHERE id = ?', [id]);
         return result;
+    },
+
+    async updateById(id, name, space, capacity, amenities) {
+        const [result] = await dbPromise.query(
+            'UPDATE rooms SET name = ?, space = ?, capacity = ?, amenities = ? WHERE id = ?',
+            [name, space, capacity, JSON.stringify(amenities || []), id]
+        );
+        return result;
     }
 };
 

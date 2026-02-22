@@ -120,25 +120,43 @@ const roomController = {
         }
     },
 
-    // DELETE ROOM (Admin only)
-    async deleteRoom(req, res) {
+    // UPDATE ROOM (Admin only)
+    async updateRoom(req, res) {
         const { id } = req.params;
+        const { name, space, capacity, amenities } = req.body;
 
         try {
-            const result = await RoomModel.deleteById(id);
+            // Check if room exists
+            const rooms = await RoomModel.findById(id);
+            if (rooms.length === 0) {
+                return res.status(404).json({ error: 'Room not found' });
+            }
+
+            const result = await RoomModel.updateById(id, name, space, capacity, amenities);
 
             if (result.affectedRows === 0) {
                 return res.status(404).json({ error: 'Room not found' });
             }
 
+            const updatedRoom = {
+                id: parseInt(id),
+                name,
+                space,
+                capacity,
+                amenities,
+                updatedBy: req.user.email,
+                updatedByRole: req.user.role,
+                updatedAt: new Date().toISOString()
+            };
+
             if (req.io) {
-                req.io.emit('room-deleted', { id: parseInt(id) });
+                req.io.emit('room-updated', updatedRoom);
             }
 
-            res.json({ message: 'Room deleted successfully' });
+            res.json(updatedRoom);
         } catch (error) {
-            console.error('Delete room error:', error);
-            res.status(500).json({ error: 'Failed to delete room' });
+            console.error('Update room error:', error);
+            res.status(500).json({ error: 'Failed to update room' });
         }
     }
 };

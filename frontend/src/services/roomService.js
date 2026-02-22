@@ -34,6 +34,16 @@ const roomService = {
             method: 'DELETE',
         });
     },
+
+    /**
+     * Update a room (requires admin authentication)
+     */
+    async updateRoom(id, data) {
+        return await authenticatedFetch(`/rooms/${id}`, {
+            method: 'PUT',
+            body: data,
+        });
+    },
 };
 
 export default roomService;
