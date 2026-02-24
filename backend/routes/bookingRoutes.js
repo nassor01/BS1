@@ -29,6 +29,17 @@ router.post('/book',
 // GET /bookings/user/:userId - Get user's bookings
 router.get('/bookings/user/:userId', authenticate, userIdParamValidation, bookingController.getUserBookings);
 
+// PUT /bookings/:id/cancel - Cancel a booking (user only)
+router.put('/bookings/:id/cancel',
+    authenticate,
+    [
+        param('id').isInt({ min: 1 }).withMessage('Invalid booking ID'),
+        body('reason').trim().notEmpty().withMessage('Cancellation reason is required').isLength({ max: 500 }).withMessage('Reason cannot exceed 500 characters')
+    ],
+    handleValidationErrors,
+    bookingController.cancelBooking
+);
+
 // ============================================================
 // ADMIN BOOKING ROUTES
 // ============================================================

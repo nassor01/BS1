@@ -341,7 +341,7 @@ const bookingController = {
     },
 
     // GET USER BOOKINGS
-async getUserBookings(req, res) {
+    async getUserBookings(req, res) {
         const { userId } = req.params;
 
         if (req.user.id !== parseInt(userId)) {
@@ -354,6 +354,115 @@ async getUserBookings(req, res) {
         } catch (error) {
             console.error('Get bookings error:', error);
             res.status(500).json({ error: 'Failed to fetch bookings' });
+        }
+    },
+
+    // CANCEL BOOKING
+    async cancelBooking(req, res) {
+        const { id } = req.params;
+        const { reason } = req.body;
+
+        try {
+            const bookings = await BookingModel.findByIdWithDetails(id);
+
+            if (bookings.length === 0) {
+                return res.status(404).json({ error: 'Booking not found' });
+            }
+
+            const booking = bookings[0];
+
+            if (booking.user_id !== req.user.id) {
+                return res.status(403).json({ error: 'You can only cancel your own bookings' });
+            }
+
+            if (booking.status === 'cancelled') {
+                return res.status(400).json({ error: 'Booking is already cancelled' });
+            }
+
+            await BookingModel.updateStatusWithReason(id, 'cancelled', reason);
+
+            console.log(`✅ Booking #${id} cancelled by user ${req.user.id}`);
+
+            const adminEmail = process.env.ADMIN_EMAIL;
+            if (adminEmail) {
+                mailerService.sendMail(
+                    adminEmail,
+                    'Booking Cancelled by User',
+                    `A user has cancelled their booking.\n\nUser: ${booking.full_name} (${booking.email})\nRoom: ${booking.room_name}\nDate: ${formatDateDisplay(booking.booking_date)}\nTime: ${booking.start_time} - ${booking.end_time}\nCancellation Reason: ${reason}`,
+                    `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+                        <h2 style="color: #f44336;">Booking Cancelled by User</h2>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>User:</strong></td>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;">${booking.full_name}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Email:</strong></td>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;">${booking.email}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Room:</strong></td>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;">${booking.room_name}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Date:</strong></td>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;">${formatDateDisplay(booking.booking_date)}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Time:</strong></td>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;">${booking.start_time} - ${booking.end_time}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee; vertical-align: top;"><strong>Cancellation Reason:</strong></td>
+                                <td style="padding: 10px; border-bottom: 1px solid #eee;">${reason}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    `
+                ).catch(err => console.error('Failed to send admin cancellation email:', err));
+            }
+
+            mailerService.sendMail(
+                booking.email,
+                'Booking Cancelled - SwahiliPot Hub',
+                `Hello ${booking.full_name},\n\nYour booking has been cancelled.\n\nRoom: ${booking.room_name}\nDate: ${formatDateDisplay(booking.booking_date)}\nTime: ${booking.start_time} - ${booking.end_time}\nCancellation Reason: ${reason}\n\nIf you have any questions, please contact us.\n\nBest regards,\nSwahiliPot Hub Team`,
+                `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+                    <h2 style="color: #f44336;">Booking Cancelled</h2>
+                    <p>Hello <strong>${booking.full_name}</strong>,</p>
+                    <p>Your booking has been cancelled as requested.</p>
+                    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                        <tr>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Room:</strong></td>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;">${booking.room_name}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Date:</strong></td>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;">${formatDateDisplay(booking.booking_date)}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Time:</strong></td>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;">${booking.start_time} - ${booking.end_time}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee; vertical-align: top;"><strong>Cancellation Reason:</strong></td>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;">${reason}</td>
+                        </tr>
+                    </table>
+                    <p>If you have any questions, please contact us.</p>
+                    <div style="margin-top: 30px; font-size: 12px; color: #777; border-top: 1px solid #eee; padding-top: 10px;">
+                        This is an automated message from SwahiliPot Hub Room Booking System.
+                    </div>
+                </div>
+                `
+            ).catch(err => console.error('Failed to send user cancellation email:', err));
+
+            res.json({ message: 'Booking cancelled successfully', bookingId: id });
+
+        } catch (error) {
+            console.error('Cancel booking error:', error);
+            res.status(500).json({ error: 'Failed to cancel booking' });
         }
     }
 };

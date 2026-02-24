@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Users, DoorOpen, Bookmark } from 'lucide-react';
+import { Search, Users, DoorOpen, Bookmark, X, AlertCircle } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Sidebar from '../components/layout/Sidebar';
@@ -23,6 +23,12 @@ const Dashboard = () => {
     const [currentView, setCurrentView] = useState('available');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+    const [selectedBooking, setSelectedBooking] = useState(null);
+    const [cancelReason, setCancelReason] = useState('');
+    const [cancelLoading, setCancelLoading] = useState(false);
+    const [cancelError, setCancelError] = useState('');
+    const [cancelSuccess, setCancelSuccess] = useState('');
 
     useEffect(() => {
         const viewParam = searchParams.get('view');
@@ -118,6 +124,43 @@ const Dashboard = () => {
             setCurrentView('booked');
         }
         fetchData();
+    };
+
+    const openCancelModal = (booking) => {
+        setSelectedBooking(booking);
+        setCancelReason('');
+        setCancelError('');
+        setCancelSuccess('');
+        setIsCancelModalOpen(true);
+    };
+
+    const handleCancelBooking = async () => {
+        if (!cancelReason.trim()) {
+            setCancelError('Please provide a cancellation reason');
+            return;
+        }
+
+        setCancelLoading(true);
+        setCancelError('');
+
+        try {
+            const response = await bookingService.cancelBooking(selectedBooking.id, cancelReason);
+            
+            if (response.ok) {
+                setCancelSuccess('Booking cancelled successfully');
+                setTimeout(() => {
+                    setIsCancelModalOpen(false);
+                    fetchData();
+                }, 1500);
+            } else {
+                const data = await response.json();
+                setCancelError(data.error || 'Failed to cancel booking');
+            }
+        } catch (err) {
+            setCancelError('Network error. Please try again.');
+        } finally {
+            setCancelLoading(false);
+        }
     };
 
     const filteredRooms = rooms.filter(room => {
@@ -239,6 +282,16 @@ const Dashboard = () => {
                                             <span className="font-medium">Type:</span> {booking.type}
                                         </p>
                                     </div>
+
+                                    {booking.status !== 'cancelled' && (
+                                        <button
+                                            onClick={() => openCancelModal(booking)}
+                                            className="w-full mt-2 flex items-center justify-center px-4 py-2 border border-red-300 rounded-lg shadow-sm text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                                        >
+                                            <X className="w-4 h-4 mr-2" />
+                                            Cancel Booking
+                                        </button>
+                                    )}
                                 </div>
                             ))}
                         </div>

@@ -34,6 +34,16 @@ const bookingService = {
     async getUserBookings(userId) {
         return await authenticatedFetch(`/bookings/user/${userId}`);
     },
+
+    /**
+     * Cancel a booking (requires authentication)
+     */
+    async cancelBooking(id, reason) {
+        return await authenticatedFetch(`/bookings/${id}/cancel`, {
+            method: 'PUT',
+            body: { reason },
+        });
+    },
 };
 
 export default bookingService;

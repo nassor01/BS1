@@ -1,10 +1,11 @@
 const jwt = require('jsonwebtoken');
+const SettingsModel = require('../models/settingsModel');
 
 /**
  * Authentication Middleware
  * Verifies JWT tokens and attaches user information to the request object
  */
-const authenticate = (req, res, next) => {
+const authenticate = async (req, res, next) => {
     try {
         // Get token from Authorization header
         const authHeader = req.headers.authorization;
@@ -37,6 +38,26 @@ const authenticate = (req, res, next) => {
             email: decoded.email,
             role: decoded.role
         };
+
+        // Check working hours for regular users (admins always have access)
+        if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+            try {
+                const config = await SettingsModel.getWorkingHoursConfig();
+                if (!config.withinHours) {
+                    return res.status(403).json({
+                        error: config.message,
+                        code: 'OUTSIDE_WORKING_HOURS',
+                        workingHours: {
+                            start: config.start,
+                            end: config.end
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error('Working hours check error:', err.message);
+                // Continue if we can't check working hours
+            }
+        }
 
         next();
     } catch (error) {

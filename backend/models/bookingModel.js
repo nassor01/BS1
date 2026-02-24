@@ -41,6 +41,10 @@ const BookingModel = {
         await dbPromise.query('UPDATE bookings SET status = ? WHERE id = ?', [status, id]);
     },
 
+    async updateStatusWithReason(id, status, reason) {
+        await dbPromise.query('UPDATE bookings SET status = ?, cancellation_reason = ? WHERE id = ?', [status, reason, id]);
+    },
+
     async findAll() {
         const [rows] = await dbPromise.query(
             `SELECT 
