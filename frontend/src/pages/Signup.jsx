@@ -52,9 +52,9 @@ const Signup = () => {
             return;
         }
 
-        // Validate password length and complexity
-        if (formData.password.length < 8) {
-            setError('Password must be at least 8 characters');
+// Validate password length
+        if (formData.password.length < 6) {
+            setError('Password must be at least 6 characters');
             return;
         }
 
@@ -71,6 +71,9 @@ const Signup = () => {
                 // Special handling for database connection errors (503)
                 if (response.status === 503) {
                     setError('Database connection error. Please ensure MySQL is running (check XAMPP or MySQL service).');
+                } else if (response.details && Array.isArray(response.details)) {
+                    // Handle validation errors array from details
+                    setError(response.details.map(e => e.message).join(', '));
                 } else if (Array.isArray(response.error)) {
                     // Handle validation errors array
                     setError(response.error.map(e => e.message).join(', '));

@@ -173,19 +173,6 @@ const Login = () => {
                             >
                                 Resend OTP
                             </button>
-
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setShowPasswordResetOtp(false);
-                                    setPasswordResetOtp('');
-                                    setTempToken('');
-                                    setError('');
-                                }}
-                                className="w-full text-sm text-gray-500 hover:text-gray-700"
-                            >
-                                Back to Login
-                            </button>
                         </div>
                     ) : show2fa ? (
                         <div className="space-y-2">
@@ -270,10 +257,12 @@ const Login = () => {
                     </button>
                 </form>
 
-                <div className="mt-6 text-center space-y-3">
-                    <Link to="/forgot-password" className="block text-sm text-blue-600 hover:text-blue-500 font-medium">
-                        Forgot Password?
-                    </Link>
+                <div className="mt-6 text-center">
+                    {!show2fa && !showPasswordResetOtp && (
+                        <Link to="/forgot-password" className="block text-sm text-blue-600 hover:text-blue-500 font-medium mb-2">
+                            Forgot Password?
+                        </Link>
+                    )}
                     <p className="text-sm text-gray-600">
                         Don't have an account?{' '}
                         <Link to="/signup" className="font-medium text-blue-600 hover:text-blue-500">

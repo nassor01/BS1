@@ -17,6 +17,7 @@ const authRoutes = require('./routes/authRoutes');
 const roomRoutes = require('./routes/roomRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
+const faqRoutes = require('./routes/faqRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -120,6 +121,7 @@ app.use('/', authRoutes);
 app.use('/rooms', roomRoutes);
 app.use('/', bookingRoutes);
 app.use('/super-admin', superAdminRoutes);
+app.use('/', faqRoutes);
 
 startReminderCron();
 

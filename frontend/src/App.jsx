@@ -8,6 +8,7 @@ import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPasswordPin from './pages/ResetPasswordPin';
 import VerifyEmail from './pages/VerifyEmail';
+import ChatbotWidget from './components/ChatbotWidget';
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function App() {
           </div>
         } />
       </Routes>
+      <ChatbotWidget />
     </Router>
   );
 }

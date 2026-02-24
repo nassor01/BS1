@@ -1,13 +1,12 @@
 require('dotenv').config();
-const sendMail = require('./mailer');
+const mailerService = require('./services/mailerService');
 
 async function testEmail() {
     console.log('Testing email service...');
     console.log('Using SMTP User:', process.env.SMTP_USER);
 
     try {
-        // sending to the same email as seen in the previous file
-        const result = await sendMail(
+        const result = await mailerService.sendMail(
             'anthonymuhati52@gmail.com',
             'SwahiliPot Hub Test Email',
             'This is a verification email from the unified mailer system.',

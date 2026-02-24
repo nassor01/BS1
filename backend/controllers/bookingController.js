@@ -2,7 +2,7 @@ const BookingModel = require('../models/bookingModel');
 const RoomModel = require('../models/roomModel');
 const UserModel = require('../models/userModel');
 const SettingsModel = require('../models/settingsModel');
-const sendMail = require('../utils/mailer');
+const mailerService = require('../services/mailerService');
 
 const formatDateDisplay = (dateStr) => {
     const date = new Date(dateStr + 'T00:00:00');
@@ -127,7 +127,7 @@ const bookingController = {
             // Send email to admin
             const adminEmail = process.env.ADMIN_EMAIL;
             if (adminEmail) {
-                sendMail(
+                mailerService.sendMail(
                     adminEmail,
                     `New Room ${bookingType === 'reservation' ? 'Reservation' : 'Booking'} Request`,
                     `New ${bookingType} request:\n\nRoom: ${room.name}\nUser: ${user.full_name} (${user.email})\nDates:\n${datesText}\nTime: ${startTime} - ${endTime}`,
@@ -189,7 +189,7 @@ const bookingController = {
             }
 
             // Send confirmation email to user
-            sendMail(
+            mailerService.sendMail(
                 user.email,
                 `Room ${bookingType === 'reservation' ? 'Reservation' : 'Booking'} Confirmation`,
                 `Hello ${user.full_name},\n\nYour ${bookingType} request has been received!\n\nRoom: ${room.name}\nDates:\n${datesText}\nTime: ${startTime} - ${endTime}\n\nYou will receive a confirmation once reviewed.${queueNotificationText}\n\nBest regards,\nSwahilipot Hub Team`,
@@ -295,7 +295,7 @@ const bookingController = {
                     </div>
                 </div>`;
 
-            sendMail(
+            mailerService.sendMail(
                 booking.email,
                 subject,
                 `Your booking status has been updated to: ${status}`,

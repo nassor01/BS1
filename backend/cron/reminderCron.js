@@ -1,6 +1,6 @@
 const nodeCron = require('node-cron');
 const BookingModel = require('../models/bookingModel');
-const sendMail = require('../utils/mailer');
+const mailerService = require('../services/mailerService');
 
 function startReminderCron() {
     // Send reminders every 30 minutes
@@ -18,7 +18,7 @@ function startReminderCron() {
 
             for (const booking of upcoming) {
                 console.log(`📧 Sending reminder to ${booking.email} for ${booking.room_name}`);
-                sendMail(
+                mailerService.sendMail(
                     booking.email,
                     'Upcoming Room Booking Reminder',
                     `Reminder: Your booking for ${booking.room_name} is starting at ${booking.start_time}.`,

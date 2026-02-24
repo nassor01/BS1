@@ -2,7 +2,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const UserModel = require('../models/userModel');
-const sendMail = require('../utils/mailer');
+const mailerService = require('../services/mailerService');
 const sessionManager = require('../services/sessionManager');
 const {
     generateAccessToken,
@@ -61,7 +61,7 @@ const authController = {
 
             // Send verification email (non-blocking)
             const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${verificationToken}`;
-            sendMail(
+            mailerService.sendMail(
                 email,
                 'Verify Your Email - SwahiliPot Hub',
                 `Hello ${fullName},\n\nPlease verify your email by clicking: ${verifyUrl}\n\nThis link expires in 24 hours.\n\nSwahiliPot Hub Team`,
@@ -383,7 +383,7 @@ const authController = {
             await UserModel.setVerificationToken(user.id, verificationToken, verificationExpires);
 
             const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${verificationToken}`;
-            sendMail(
+            mailerService.sendMail(
                 email,
                 'Verify Your Email - SwahiliPot Hub',
                 `Please verify your email: ${verifyUrl}`,
@@ -454,7 +454,7 @@ const authController = {
             
             await UserModel.setPasswordResetToken(user.id, resetPin, resetExpires);
 
-            sendMail(
+            mailerService.sendMail(
                 email,
                 'Password Reset PIN - SwahiliPot Hub',
                 `Your password reset PIN is: ${resetPin}\n\nThis PIN expires in 15 minutes.`,
@@ -513,7 +513,7 @@ const authController = {
             await UserModel.setLoginOtp(user.id, loginOtp, loginOtpExpires);
 
             // Send OTP to user's email
-            sendMail(
+            mailerService.sendMail(
                 user.email,
                 'Login Verification OTP - SwahiliPot Hub',
                 `Your login verification OTP is: ${loginOtp}\n\nThis OTP is required to verify your identity the next time you log in after your password reset.\n\nThis OTP expires in 24 hours.`,
@@ -529,7 +529,7 @@ const authController = {
 
             console.log(`✅ Password reset with PIN for: ${user.email} - OTP sent for next login`);
 
-            sendMail(
+            mailerService.sendMail(
                 user.email,
                 'Password Changed - SwahiliPot Hub',
                 'Your password has been changed successfully.',
@@ -570,7 +570,7 @@ const authController = {
 
             console.log(`✅ Password reset for: ${users[0].email}`);
 
-            sendMail(
+            mailerService.sendMail(
                 users[0].email,
                 'Password Changed - SwahiliPot Hub',
                 'Your password has been changed successfully.',
@@ -698,7 +698,7 @@ const authController = {
             }
 
             // Resend the existing OTP
-            sendMail(
+            mailerService.sendMail(
                 user.email,
                 'Login Verification OTP - SwahiliPot Hub',
                 `Your login verification OTP is: ${user.login_otp}\n\nThis OTP is required to verify your identity.\n\nThis OTP expires in 24 hours.`,

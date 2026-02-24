@@ -33,10 +33,8 @@ const signupValidation = [
         .withMessage('Email must not exceed 255 characters'),
     
     body('password')
-        .isLength({ min: 8 })
-        .withMessage('Password must be at least 8 characters')
-        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/)
-        .withMessage('Password must contain uppercase, lowercase, number and special character'),
+        .isLength({ min: 6 })
+        .withMessage('Password must be at least 6 characters long'),
     
     body('fullName')
         .trim()
@@ -50,9 +48,7 @@ const signupValidation = [
         .notEmpty()
         .withMessage('Department is required')
         .isLength({ max: 100 })
-        .withMessage('Department name must not exceed 100 characters'),
-    
-    handleValidationErrors
+        .withMessage('Department name must not exceed 100 characters')
 ];
 
 /**
@@ -65,11 +61,9 @@ const loginValidation = [
         .withMessage('Please provide a valid email address')
         .normalizeEmail(),
     
-    body('password')
+body('password')
         .notEmpty()
-        .withMessage('Password is required'),
-    
-    handleValidationErrors
+        .withMessage('Password is required')
 ];
 
 /**
@@ -112,12 +106,10 @@ const bookingValidation = [
             return true;
         }),
     
-    body('type')
+body('type')
         .optional()
         .isIn(['booking', 'reservation'])
-        .withMessage('Type must be either booking or reservation'),
-    
-    handleValidationErrors
+        .withMessage('Type must be either booking or reservation')
 ];
 
 /**
@@ -138,9 +130,7 @@ const roomValidation = [
         .optional(),
     
     body('amenities')
-        .optional(),
-    
-    handleValidationErrors
+        .optional()
 ];
 
 /**
@@ -150,9 +140,7 @@ const idParamValidation = [
     param('id')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Invalid ID parameter'),
-    
-    handleValidationErrors
+        .withMessage('Invalid ID parameter')
 ];
 
 /**
@@ -162,9 +150,7 @@ const userIdParamValidation = [
     param('userId')
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Invalid user ID parameter'),
-    
-    handleValidationErrors
+        .withMessage('Invalid user ID parameter')
 ];
 
 /**
@@ -179,13 +165,11 @@ const bookingStatusValidation = [
         .isIn(['confirmed', 'rejected', 'cancelled'])
         .withMessage('Status must be one of: confirmed, rejected, cancelled'),
     
-    body('adminNotes')
+body('adminNotes')
         .optional()
         .trim()
         .isLength({ max: 500 })
-        .withMessage('Admin notes must not exceed 500 characters'),
-    
-    handleValidationErrors
+        .withMessage('Admin notes must not exceed 500 characters')
 ];
 
 module.exports = {

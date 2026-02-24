@@ -7,8 +7,8 @@ const { authenticate } = require('../middleware/auth');
 const { authLimiter, adminAuthLimiter } = require('../middleware/rateLimiter');
 const verifyRecaptcha = require('../middleware/verifyRecaptcha');
 const {
-    signupValidation: validateSignup,
-    loginValidation: validateLogin,
+    signupValidation,
+    loginValidation,
     userIdParamValidation,
     handleValidationErrors
 } = require('../middleware/validation');
@@ -21,7 +21,7 @@ const { body } = require('express-validator');
 // POST /signup - Register new user
 router.post('/signup',
     authLimiter,
-    validateSignup,
+    signupValidation,
     handleValidationErrors,
     authController.signup
 );
@@ -29,7 +29,7 @@ router.post('/signup',
 // POST /login - Login
 router.post('/login',
     authLimiter,
-    validateLogin,
+    loginValidation,
     handleValidationErrors,
     authController.login
 );
