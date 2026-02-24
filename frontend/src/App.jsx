@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
@@ -10,9 +10,12 @@ import ResetPasswordPin from './pages/ResetPasswordPin';
 import VerifyEmail from './pages/VerifyEmail';
 import ChatbotWidget from './components/ChatbotWidget';
 
-function App() {
+function AppContent() {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.includes('/admin') || location.pathname.includes('/super-admin');
+  
   return (
-    <Router>
+    <>
       <Routes>
         {/* Default redirect */}
         <Route path="/" element={<Navigate to="/login" replace />} />
@@ -45,7 +48,15 @@ function App() {
           </div>
         } />
       </Routes>
-      <ChatbotWidget />
+      {!isAdminRoute && <ChatbotWidget />}
+    </>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   );
 }

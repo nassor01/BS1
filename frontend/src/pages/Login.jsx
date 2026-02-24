@@ -75,6 +75,8 @@ const Login = () => {
             } else {
                 if (response.status === 503) {
                     setError('Database connection error. Please ensure MySQL is running (check XAMPP or MySQL service).');
+                } else if (response.code === 'OUTSIDE_WORKING_HOURS') {
+                    setError(response.error || 'System is only available during working hours.');
                 } else {
                     setError(response.error || 'Invalid credentials');
                 }

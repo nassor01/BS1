@@ -472,6 +472,58 @@ No changes - existing admin endpoints remain the same.
 
 ---
 
+## 11. Working Hours Enforcement (IMPLEMENTED)
+
+### Overview
+Block regular users from accessing the system outside of configured working hours while allowing super admins and admins full access at all times.
+
+### Implementation Details
+
+#### 11.1 Backend Changes
+
+**Settings Model** (`backend/models/settingsModel.js`)
+- Added `isWithinWorkingHours()` method - returns boolean based on current time vs configured hours
+- Added `getWorkingHoursConfig()` method - returns config with message
+
+**New Middleware** (`backend/middleware/workingHours.js`)
+- Created `checkWorkingHours` middleware for route protection
+
+**Auth Controller** (`backend/controllers/authController.js`)
+- Added working hours check in `login()` function (lines 146-158)
+- Added working hours check in `adminLogin()` function (lines 283-295)
+- Admins and super admins bypass working hours restrictions
+
+**Booking Controller** (`backend/controllers/bookingController.js`)
+- Added working hours check in `createBooking()` function
+- Returns 403 with `OUTSIDE_WORKING_HOURS` error code when blocked
+
+#### 11.2 Frontend Changes
+
+**Login Page** (`frontend/src/pages/Login.jsx`)
+- Added error handling for `OUTSIDE_WORKING_HOURS` error code
+- Shows user-friendly message when blocked
+
+### Error Response Format
+```json
+{
+  "error": "System is only available from 08:00 to 18:00. Please contact support if you need emergency access.",
+  "code": "OUTSIDE_WORKING_HOURS",
+  "workingHours": {
+    "start": "08:00",
+    "end": "18:00"
+  }
+}
+```
+
+### Access Rules
+| User Role | Login Outside Hours | Book Outside Hours |
+|-----------|---------------------|-------------------|
+| super_admin | ✅ Always allowed | ✅ Always allowed |
+| admin | ✅ Always allowed | ✅ Always allowed |
+| user | ❌ Blocked | ❌ Blocked |
+
+---
+
 ## Next Steps
 
 1. **Review this plan** and confirm all requirements are captured

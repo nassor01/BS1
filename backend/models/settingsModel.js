@@ -64,6 +64,33 @@ const SettingsModel = {
             'SELECT setting_value FROM system_settings WHERE setting_key = "maintenance_mode"'
         );
         return rows.length > 0 && rows[0].setting_value === 'true';
+    },
+
+    async isWithinWorkingHours() {
+        const workingHours = await this.getWorkingHours();
+        const now = new Date();
+        const currentTime = now.getHours() * 60 + now.getMinutes();
+        
+        const [startHour, startMin] = workingHours.start.split(':').map(Number);
+        const [endHour, endMin] = workingHours.end.split(':').map(Number);
+        
+        const startTime = startHour * 60 + startMin;
+        const endTime = endHour * 60 + endMin;
+        
+        return currentTime >= startTime && currentTime < endTime;
+    },
+
+    async getWorkingHoursConfig() {
+        const workingHours = await this.getWorkingHours();
+        const withinHours = await this.isWithinWorkingHours();
+        return {
+            start: workingHours.start,
+            end: workingHours.end,
+            withinHours,
+            message: withinHours 
+                ? null 
+                : `System is only available from ${workingHours.start} to ${workingHours.end}. Please contact support if you need emergency access.`
+        };
     }
 };
 

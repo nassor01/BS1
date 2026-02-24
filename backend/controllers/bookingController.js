@@ -32,7 +32,26 @@ const bookingController = {
             }
         } catch (err) {
             console.error('Error checking maintenance mode:', err);
-            // Continue if we can't check maintenance mode
+        }
+
+        // Check working hours for regular users
+        const userRole = req.user?.role;
+        if (userRole !== 'admin' && userRole !== 'super_admin') {
+            try {
+                const config = await SettingsModel.getWorkingHoursConfig();
+                if (!config.withinHours) {
+                    return res.status(403).json({
+                        error: config.message,
+                        code: 'OUTSIDE_WORKING_HOURS',
+                        workingHours: {
+                            start: config.start,
+                            end: config.end
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error('Error checking working hours:', err);
+            }
         }
 
         // For reservations, accept either single date or multiple dates array

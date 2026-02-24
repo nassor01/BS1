@@ -2,6 +2,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const UserModel = require('../models/userModel');
+const SettingsModel = require('../models/settingsModel');
 const mailerService = require('../services/mailerService');
 const sessionManager = require('../services/sessionManager');
 const {
@@ -142,6 +143,21 @@ const authController = {
             // Successful login - reset failed attempts
             await UserModel.resetFailedAttempts(user.id);
 
+            // Check working hours for regular users (admins and super admins have always-on access)
+            if (user.role !== 'admin' && user.role !== 'super_admin') {
+                const config = await SettingsModel.getWorkingHoursConfig();
+                if (!config.withinHours) {
+                    return res.status(403).json({
+                        error: config.message,
+                        code: 'OUTSIDE_WORKING_HOURS',
+                        workingHours: {
+                            start: config.start,
+                            end: config.end
+                        }
+                    });
+                }
+            }
+
             // Check if user needs to verify with OTP after password reset (within 24 hours)
             const hasRecentReset = await UserModel.hasRecentPasswordReset(user.id);
             if (hasRecentReset && user.login_otp) {
@@ -265,6 +281,21 @@ const authController = {
 
             // Successful login - reset failed attempts
             await UserModel.resetFailedAttempts(user.id);
+
+            // Check working hours for non-admin users (admins always have access)
+            if (user.role !== 'admin' && user.role !== 'super_admin') {
+                const config = await SettingsModel.getWorkingHoursConfig();
+                if (!config.withinHours) {
+                    return res.status(403).json({
+                        error: config.message,
+                        code: 'OUTSIDE_WORKING_HOURS',
+                        workingHours: {
+                            start: config.start,
+                            end: config.end
+                        }
+                    });
+                }
+            }
 
             // Check if user needs to verify with OTP after password reset (within 24 hours)
             const hasRecentReset = await UserModel.hasRecentPasswordReset(user.id);
