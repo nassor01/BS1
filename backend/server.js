@@ -9,8 +9,8 @@ const { dbPromise, db } = require('./config/db');
 const startReminderCron = require('./cron/reminderCron');
 const startWorkingHoursCron = require('./cron/workingHoursCron');
 const { apiLimiter } = require('./middleware/rateLimiter');
-const { sanitizeInput, validateContentType, validateRequestSize } = require('./middleware/sanitization');
-const { getCsrfToken } = require('./middleware/csrf');
+const { sanitizeInput, customSanitize, validateContentType, validateRequestSize } = require('./middleware/sanitization');
+const { getCsrfToken, setCsrfToken } = require('./middleware/csrf');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const sessionManager = require('./services/sessionManager');
 
@@ -77,9 +77,11 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use(sanitizeInput);
+app.use(customSanitize);   // XSS string stripping (null bytes, script tags, event handlers)
 app.use(validateContentType);
 app.use(validateRequestSize);
 
+app.use(setCsrfToken);     // Set CSRF double-submit cookie on every response
 app.use(apiLimiter);
 
 app.use((req, res, next) => {
@@ -131,7 +133,7 @@ sessionManager.setSocketIO(io);
 
 io.on('connection', (socket) => {
     console.log(`🔌 Socket connected: ${socket.id}`);
-    
+
     socket.on('disconnect', () => {
         console.log(`🔌 Socket disconnected: ${socket.id}`);
     });

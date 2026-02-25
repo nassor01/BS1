@@ -43,7 +43,7 @@ const Dashboard = () => {
         try {
             const userStr = localStorage.getItem('user');
             const user = userStr ? JSON.parse(userStr) : null;
-            
+
             const [roomsRes, bookingsRes] = await Promise.all([
                 roomService.getRooms(selectedDate),
                 user ? bookingService.getUserBookings(user.id) : Promise.resolve({ ok: false })
@@ -71,8 +71,8 @@ const Dashboard = () => {
 
     useEffect(() => {
         socketService.connect(
-            () => {},
-            () => {}
+            () => { },
+            () => { }
         );
 
         const handleRoomCreated = (newRoom) => {
@@ -127,14 +127,42 @@ const Dashboard = () => {
     };
 
     const openCancelModal = (booking) => {
-        setSelectedBooking(booking);
-        setCancelReason('');
-        setCancelError('');
-        setCancelSuccess('');
-        setIsCancelModalOpen(true);
+        try {
+            console.log('=== Opening cancel modal ===');
+            console.log('Booking received:', booking);
+            console.log('Booking id:', booking?.id);
+            console.log('Booking room_name:', booking?.room_name);
+
+            if (!booking) {
+                console.error('Attempted to open cancel modal with null booking');
+                return;
+            }
+
+            if (!booking.id) {
+                console.error('Booking has no id:', booking);
+                setCancelError('System error: Booking has no ID');
+                return;
+            }
+
+            setSelectedBooking(booking);
+            setCancelReason('');
+            setCancelError('');
+            setCancelSuccess('');
+            setIsCancelModalOpen(true);
+            console.log('Cancel modal should now be open');
+        } catch (err) {
+            console.error('Error in openCancelModal:', err);
+            setCancelError('Error opening cancel modal');
+        }
     };
 
     const handleCancelBooking = async () => {
+        if (!selectedBooking) {
+            console.error('No booking selected for cancellation');
+            setCancelError('System error: No booking selected');
+            return;
+        }
+
         if (!cancelReason.trim()) {
             setCancelError('Please provide a cancellation reason');
             return;
@@ -143,20 +171,39 @@ const Dashboard = () => {
         setCancelLoading(true);
         setCancelError('');
 
+        console.log('Initiating cancellation for booking:', selectedBooking.id);
+        console.log('Cancellation reason:', cancelReason);
+
         try {
+            console.log('Calling bookingService.cancelBooking with id:', selectedBooking.id);
             const response = await bookingService.cancelBooking(selectedBooking.id, cancelReason);
-            
+
+            console.log('Cancel response status:', response.status);
+            console.log('Cancel response ok:', response.ok);
+
             if (response.ok) {
+                console.log('Cancellation successful for booking:', selectedBooking.id);
                 setCancelSuccess('Booking cancelled successfully');
                 setTimeout(() => {
                     setIsCancelModalOpen(false);
+                    setSelectedBooking(null); // Clear selected booking on success
                     fetchData();
                 }, 1500);
             } else {
-                const data = await response.json();
-                setCancelError(data.error || 'Failed to cancel booking');
+                // Log the full error response
+                const errorText = await response.text();
+                console.error('Cancellation failed with status:', response.status);
+                console.error('Cancellation error response:', errorText);
+                let data;
+                try {
+                    data = JSON.parse(errorText);
+                } catch (e) {
+                    data = { error: errorText };
+                }
+                setCancelError(data.error || `Failed to cancel booking (${response.status})`);
             }
         } catch (err) {
+            console.error('Cancellation network error:', err);
             setCancelError('Network error. Please try again.');
         } finally {
             setCancelLoading(false);
@@ -207,6 +254,7 @@ const Dashboard = () => {
 
             {isCancelModalOpen && selectedBooking && (
                 <div className="fixed inset-0 z-50 overflow-y-auto">
+                    {console.log('=== RENDERING CANCEL MODAL ===')}
                     <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
                         <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setIsCancelModalOpen(false)} />
 
@@ -214,16 +262,18 @@ const Dashboard = () => {
                             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                                 <div className="sm:flex sm:items-start">
                                     <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                                        <AlertCircle className="h-6 w-6 text-red-600" />
+                                        <AlertCircle className="h-6 w-6 text-red-600" title="Alert Icon" />
                                     </div>
                                     <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                                        <h3 className="text-lg leading-6 font-medium text-gray-900">Cancel Booking</h3>
+                                        <h3 className="text-lg leading-6 font-medium text-gray-900" id="cancel-modal-title">Cancel Booking</h3>
                                         <div className="mt-2">
                                             <p className="text-sm text-gray-500 mb-4">
                                                 Are you sure you want to cancel this booking?
                                             </p>
-                                            
+
                                             <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                                                {console.log('=== RENDERING BOOKING DETAILS ===')}
+                                                {console.log('selectedBooking:', selectedBooking)}
                                                 <p className="text-sm font-medium text-gray-900">{selectedBooking.room_name}</p>
                                                 <p className="text-sm text-gray-500">{selectedBooking.booking_date} | {selectedBooking.start_time} - {selectedBooking.end_time}</p>
                                             </div>
@@ -332,11 +382,10 @@ const Dashboard = () => {
                                             <h3 className="text-lg font-bold text-gray-900">{booking.room_name}</h3>
                                             <p className="text-sm text-gray-500">{booking.space}</p>
                                         </div>
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                            booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
                                             booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                                                 'bg-red-100 text-red-800'
-                                        }`}>
+                                            }`}>
                                             {booking.status}
                                         </span>
                                     </div>
@@ -355,10 +404,19 @@ const Dashboard = () => {
 
                                     {booking.status !== 'cancelled' && (
                                         <button
-                                            onClick={() => openCancelModal(booking)}
+                                            id={`cancel-btn-${booking.id}`}
+                                            title="Cancel this booking"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                console.log('=== CANCEL BUTTON CLICKED ===');
+                                                console.log('Booking:', booking);
+                                                console.log('Booking.id:', booking.id);
+                                                openCancelModal(booking);
+                                            }}
                                             className="w-full mt-2 flex items-center justify-center px-4 py-2 border border-red-300 rounded-lg shadow-sm text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
                                         >
-                                            <X className="w-4 h-4 mr-2" />
+                                            <X className="w-4 h-4 mr-2" title="Close" />
                                             Cancel Booking
                                         </button>
                                     )}

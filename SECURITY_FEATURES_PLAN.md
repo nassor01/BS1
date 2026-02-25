@@ -307,6 +307,8 @@ Service worker, push notifications, mobile-optimized UI.
 | Password Security | Complete |
 | Security Headers | Complete |
 | CORS | Complete |
+| CSRF Protection | Complete (Enforced) |
+| Input Sanitization | Complete (Active) |
 
 ---
 

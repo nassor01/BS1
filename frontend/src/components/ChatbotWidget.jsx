@@ -99,11 +99,10 @@ const ChatbotWidget = () => {
                 className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[80%] px-4 py-2 rounded-2xl ${
-                    message.sender === 'user'
+                  className={`max-w-[80%] px-4 py-2 rounded-2xl ${message.sender === 'user'
                       ? 'bg-[#0B4F6C] text-white rounded-br-md'
                       : 'bg-white text-gray-800 border border-gray-200 rounded-bl-md shadow-sm'
-                  }`}
+                    }`}
                 >
                   <p className="text-sm whitespace-pre-wrap">{message.text}</p>
                   <span className={`text-xs mt-1 block ${message.sender === 'user' ? 'text-white/60' : 'text-gray-400'}`}>
@@ -170,14 +169,13 @@ const ChatbotWidget = () => {
 
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 ${
-          isOpen ? 'bg-gray-600 hover:bg-gray-700' : 'bg-[#0B4F6C] hover:bg-[#0a3d5c]'
-        }`}
+        className={`w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 ${isOpen ? 'bg-gray-600 hover:bg-gray-700' : 'bg-[#0B4F6C] hover:bg-[#0a3d5c]'
+          }`}
       >
         {isOpen ? (
-          <X className="w-6 h-6 text-white" />
+          <X className="w-6 h-6 text-white" title="Close Chat" />
         ) : (
-          <MessageCircle className="w-6 h-6 text-white" />
+          <MessageCircle className="w-6 h-6 text-white" title="Open Chat" />
         )}
       </button>
     </div>

@@ -3,9 +3,7 @@ import { X, Calendar as CalendarIcon, Clock, ChevronDown, ChevronLeft, ChevronRi
 import bookingService from '../../services/bookingService';
 
 const BookingModal = ({ isOpen, onClose, room, type, onSuccess }) => {
-    // Early return must be BEFORE any hooks - guard against undefined props
-    if (!isOpen || !room || !type) return null;
-
+    // All hooks MUST run unconditionally (React rules of hooks)
     const isReservation = type === 'reservation';
     const [formData, setFormData] = useState({
         date: new Date().toLocaleDateString('en-CA'),
@@ -22,6 +20,9 @@ const BookingModal = ({ isOpen, onClose, room, type, onSuccess }) => {
     const [isDragging, setIsDragging] = useState(false);
     const dragModeRef = useRef(null);
     const calendarRef = useRef(null);
+
+    // Guard AFTER all hooks — React requires hooks to always run unconditionally
+    if (!isOpen || !room || !type) return null;
 
     const formatDateISO = (date) => {
         const year = date.getFullYear();
