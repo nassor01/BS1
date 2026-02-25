@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Building2, User, Eye, EyeOff } from 'lucide-react';
 import authService from '../services/authService';
@@ -19,6 +19,15 @@ const Login = () => {
     const [passwordResetOtp, setPasswordResetOtp] = useState('');
     const [tempToken, setTempToken] = useState('');
     const [otpMessage, setOtpMessage] = useState('');
+
+    // Check for working hours error on mount
+    useEffect(() => {
+        const workingHoursError = sessionStorage.getItem('workingHoursError');
+        if (workingHoursError) {
+            setError(workingHoursError);
+            sessionStorage.removeItem('workingHoursError');
+        }
+    }, []);
 
     const handleChange = (e) => {
         const { name, value } = e.target;

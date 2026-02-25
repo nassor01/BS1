@@ -79,14 +79,44 @@ const bookingValidation = [
         .withMessage('Valid room ID is required'),
     
     body('date')
-        .matches(/^\d{4}-\d{2}-\d{2}$/)
-        .withMessage('Valid date in YYYY-MM-DD format is required')
+        .optional({ nullable: true })
+        .custom((value, { req }) => {
+            const hasDate = value && /^\d{4}-\d{2}-\d{2}$/.test(value);
+            const hasDates = req.body.dates && Array.isArray(req.body.dates) && req.body.dates.length > 0;
+            
+            if (!hasDate && !hasDates) {
+                throw new Error('Either date or dates is required');
+            }
+            
+            if (hasDate) {
+                const bookingDate = new Date(value);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                if (bookingDate < today) {
+                    throw new Error('Cannot book for past dates');
+                }
+            }
+            return true;
+        }),
+    
+    body('dates')
+        .optional({ nullable: true })
         .custom((value) => {
-            const bookingDate = new Date(value);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            if (bookingDate < today) {
-                throw new Error('Cannot book for past dates');
+            if (!value) return true;
+            if (!Array.isArray(value)) {
+                throw new Error('Dates must be an array');
+            }
+            const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+            for (const d of value) {
+                if (!dateRegex.test(d)) {
+                    throw new Error('All dates must be in YYYY-MM-DD format');
+                }
+                const bookingDate = new Date(d);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                if (bookingDate < today) {
+                    throw new Error('Cannot book for past dates');
+                }
             }
             return true;
         }),
@@ -106,7 +136,7 @@ const bookingValidation = [
             return true;
         }),
     
-body('type')
+    body('type')
         .optional()
         .isIn(['booking', 'reservation'])
         .withMessage('Type must be either booking or reservation')
@@ -148,7 +178,6 @@ const idParamValidation = [
  */
 const userIdParamValidation = [
     param('userId')
-        .optional()
         .isInt({ min: 1 })
         .withMessage('Invalid user ID parameter')
 ];

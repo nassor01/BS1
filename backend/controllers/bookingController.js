@@ -82,44 +82,32 @@ const bookingController = {
 
             const user = users[0];
 
-            // Check for conflicts and get queue positions
+            // Check for conflicts first (before creating bookings)
             const conflicts = [];
-            const queueInfo = [];
+            const hasConfirmedConflicts = {};
 
             for (const d of dateList) {
                 const existingBookings = await BookingModel.findConflicting(roomId, d, startTime, endTime);
                 
-                // Filter to only pending bookings for queue position
-                const pendingBookings = existingBookings.filter(b => b.status === 'pending');
-                
-                if (pendingBookings.length > 0 || existingBookings.some(b => b.status === 'confirmed')) {
-                    // There's a conflict - get queue position
-                    const queue = await BookingModel.getQueuePosition(roomId, d, startTime, endTime);
-                    queueInfo.push({
-                        date: d,
-                        queuePosition: queue.length + 1,
-                        hasConfirmed: existingBookings.some(b => b.status === 'confirmed')
-                    });
-                    conflicts.push({
-                        date: d,
-                        hasConfirmed: existingBookings.some(b => b.status === 'confirmed'),
-                        queuePosition: queue.length + 1
-                    });
+                // Check if there's a confirmed booking conflict
+                const confirmedExists = existingBookings.some(b => b.status === 'confirmed');
+                if (confirmedExists) {
+                    hasConfirmedConflicts[d] = true;
                 }
             }
 
             // If booking type and there are confirmed conflicts, reject
             if (bookingType === 'booking') {
-                const confirmedConflicts = conflicts.filter(c => c.hasConfirmed);
-                if (confirmedConflicts.length > 0) {
+                const confirmedDates = Object.keys(hasConfirmedConflicts);
+                if (confirmedDates.length > 0) {
                     return res.status(409).json({
                         error: 'Room is already confirmed for this time slot',
-                        conflictingDates: confirmedConflicts.map(c => c.date)
+                        conflictingDates: confirmedDates
                     });
                 }
             }
 
-            // Create bookings for all dates
+            // Create bookings for all dates FIRST
             const bookingsToCreate = dateList.map(d => ({
                 userId,
                 roomId,
@@ -133,10 +121,21 @@ const bookingController = {
 
             console.log(`✅ ${bookingType === 'reservation' ? 'Reservation' : 'Booking'} created: Room ${room.name} by ${user.email} for ${dateList.length} date(s)`);
 
-            // Prepare queue position response
+            // NOW calculate queue positions AFTER bookings are created
+            // This ensures the user's own booking is included in the queue count
             const queuePositions = {};
-            for (const qi of queueInfo) {
-                queuePositions[qi.date] = qi.queuePosition;
+            
+            for (const d of dateList) {
+                const existingBookings = await BookingModel.findConflicting(roomId, d, startTime, endTime);
+                const pendingBookings = existingBookings.filter(b => b.status === 'pending');
+                
+                if (pendingBookings.length > 0) {
+                    // Get queue position - now includes the newly created booking
+                    const queue = await BookingModel.getQueuePosition(roomId, d, startTime, endTime);
+                    // Find the user's position in the queue (1-based index)
+                    const userQueueIndex = queue.findIndex(q => q.user_id === parseInt(userId));
+                    queuePositions[d] = userQueueIndex >= 0 ? userQueueIndex + 1 : queue.length;
+                }
             }
 
             // Build dates HTML for email
@@ -344,15 +343,28 @@ const bookingController = {
     async getUserBookings(req, res) {
         const { userId } = req.params;
 
+        console.log('=== getUserBookings called ===');
+        console.log('userId param:', userId);
+        console.log('req.user:', req.user);
+
+        if (!req.user) {
+            console.error('No user in request!');
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+
         if (req.user.id !== parseInt(userId)) {
+            console.error('User ID mismatch:', req.user.id, 'vs', userId);
             return res.status(403).json({ error: 'Access denied' });
         }
 
         try {
+            console.log('Fetching bookings for user:', userId);
             const bookings = await BookingModel.findByUserId(userId);
+            console.log('Found bookings:', bookings.length);
             res.json(bookings);
         } catch (error) {
-            console.error('Get bookings error:', error);
+            console.error('=== Get bookings error ===');
+            console.error(error);
             res.status(500).json({ error: 'Failed to fetch bookings' });
         }
     },

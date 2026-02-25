@@ -205,6 +205,76 @@ const Dashboard = () => {
                 onSuccess={handleBookingSuccess}
             />
 
+            {isCancelModalOpen && selectedBooking && (
+                <div className="fixed inset-0 z-50 overflow-y-auto">
+                    <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                        <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setIsCancelModalOpen(false)} />
+
+                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
+                            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                                <div className="sm:flex sm:items-start">
+                                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                                        <AlertCircle className="h-6 w-6 text-red-600" />
+                                    </div>
+                                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                        <h3 className="text-lg leading-6 font-medium text-gray-900">Cancel Booking</h3>
+                                        <div className="mt-2">
+                                            <p className="text-sm text-gray-500 mb-4">
+                                                Are you sure you want to cancel this booking?
+                                            </p>
+                                            
+                                            <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                                                <p className="text-sm font-medium text-gray-900">{selectedBooking.room_name}</p>
+                                                <p className="text-sm text-gray-500">{selectedBooking.booking_date} | {selectedBooking.start_time} - {selectedBooking.end_time}</p>
+                                            </div>
+
+                                            <label htmlFor="cancelReason" className="block text-sm font-medium text-gray-700 mb-1">
+                                                Cancellation Reason <span className="text-red-500">*</span>
+                                            </label>
+                                            <textarea
+                                                id="cancelReason"
+                                                rows={3}
+                                                className="shadow-sm focus:ring-red-500 focus:border-red-500 block w-full sm:text-sm border border-gray-300 rounded-md p-2"
+                                                placeholder="Please provide a reason for cancellation..."
+                                                value={cancelReason}
+                                                onChange={(e) => setCancelReason(e.target.value)}
+                                                maxLength={500}
+                                            />
+                                            <p className="text-xs text-gray-400 mt-1">{cancelReason.length}/500 characters</p>
+                                        </div>
+
+                                        {cancelError && (
+                                            <p className="text-sm text-red-600 mt-2">{cancelError}</p>
+                                        )}
+                                        {cancelSuccess && (
+                                            <p className="text-sm text-green-600 mt-2">{cancelSuccess}</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                                <button
+                                    type="button"
+                                    onClick={handleCancelBooking}
+                                    disabled={cancelLoading || cancelSuccess}
+                                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {cancelLoading ? 'Cancelling...' : cancelSuccess ? 'Cancelled!' : 'Confirm Cancellation'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCancelModalOpen(false)}
+                                    disabled={cancelLoading}
+                                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                                >
+                                    Back
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-grow">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
                     <div className="flex flex-col gap-1">

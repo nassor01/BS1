@@ -7,6 +7,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const { dbPromise, db } = require('./config/db');
 const startReminderCron = require('./cron/reminderCron');
+const startWorkingHoursCron = require('./cron/workingHoursCron');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const { sanitizeInput, validateContentType, validateRequestSize } = require('./middleware/sanitization');
 const { getCsrfToken } = require('./middleware/csrf');
@@ -124,6 +125,7 @@ app.use('/super-admin', superAdminRoutes);
 app.use('/', faqRoutes);
 
 startReminderCron();
+startWorkingHoursCron();
 
 sessionManager.setSocketIO(io);
 

@@ -42,6 +42,22 @@ const sessionManager = {
         }));
     },
 
+    // Get all sessions with user IDs (for working hours enforcement)
+    getAllSessions() {
+        const sessions = [];
+        for (const [userId, session] of activeSessions.entries()) {
+            sessions.push({
+                userId,
+                email: session.email,
+                role: session.role,
+                fullName: session.fullName,
+                loginTime: session.loginTime,
+                lastActivity: session.lastActivity
+            });
+        }
+        return sessions;
+    },
+
     cleanupExpiredSessions() {
         const now = new Date();
         for (const [userId, session] of activeSessions.entries()) {

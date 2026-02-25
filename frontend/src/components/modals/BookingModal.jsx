@@ -3,8 +3,8 @@ import { X, Calendar as CalendarIcon, Clock, ChevronDown, ChevronLeft, ChevronRi
 import bookingService from '../../services/bookingService';
 
 const BookingModal = ({ isOpen, onClose, room, type, onSuccess }) => {
-    // Early return must be BEFORE any hooks
-    if (!isOpen || !room) return null;
+    // Early return must be BEFORE any hooks - guard against undefined props
+    if (!isOpen || !room || !type) return null;
 
     const isReservation = type === 'reservation';
     const [formData, setFormData] = useState({
@@ -166,10 +166,10 @@ const BookingModal = ({ isOpen, onClose, room, type, onSuccess }) => {
             }
 
             const response = await bookingService.createBooking(payload);
-            
+
             // Log response status for debugging
             console.log('Booking response:', response.status, response.statusText);
-            
+
             const data = await response.json();
             console.log('Booking response data:', data);
 

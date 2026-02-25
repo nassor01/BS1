@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const bookingController = require('../controllers/bookingController');
+const BookingModel = require('../models/bookingModel');
 const analyticsController = require('../controllers/analyticsController');
 const AuditLogger = require('../middleware/auditLogger');
 const { authenticate, authorizeAdmin } = require('../middleware/auth');
-const { bookingValidation, bookingStatusValidation, idParamValidation, userIdParamValidation, handleValidationErrors } = require('../middleware/validation');
+const { bookingValidation, bookingStatusValidation, idParamValidation, handleValidationErrors } = require('../middleware/validation');
 const { bookingLimiter } = require('../middleware/rateLimiter');
-const { body } = require('express-validator');
+const { asyncHandler } = require('../middleware/errorHandler');
+const { body, param } = require('express-validator');
 
 // ============================================================
 // BOOKING ROUTES
@@ -27,7 +29,29 @@ router.post('/book',
 );
 
 // GET /bookings/user/:userId - Get user's bookings
-router.get('/bookings/user/:userId', authenticate, userIdParamValidation, bookingController.getUserBookings);
+router.get('/bookings/user/:userId', authenticate, async (req, res) => {
+    console.log('=== Route handler called ===');
+    console.log('userId:', req.params.userId);
+    console.log('user:', req.user);
+    
+    try {
+        const { userId } = req.params;
+
+        if (!req.user) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+
+        if (req.user.id !== parseInt(userId)) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
+        const bookings = await BookingModel.findByUserId(userId);
+        res.json(bookings);
+    } catch (error) {
+        console.error('Error fetching bookings:', error);
+        res.status(500).json({ error: 'Failed to fetch bookings' });
+    }
+});
 
 // PUT /bookings/:id/cancel - Cancel a booking (user only)
 router.put('/bookings/:id/cancel',

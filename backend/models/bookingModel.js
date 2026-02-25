@@ -2,19 +2,24 @@ const { dbPromise } = require('../config/db');
 
 const BookingModel = {
     async findConflicting(roomId, date, startTime, endTime) {
-        const [rows] = await dbPromise.query(
-            `SELECT * FROM bookings 
-             WHERE room_id = ? 
-             AND booking_date = ? 
-             AND status IN ('pending', 'confirmed')
-             AND (
-                 (start_time <= ? AND end_time > ?) OR
-                 (start_time < ? AND end_time >= ?) OR
-                 (start_time >= ? AND end_time <= ?)
-             )`,
-            [roomId, date, startTime, startTime, endTime, endTime, startTime, endTime]
-        );
-        return rows;
+        try {
+            const [rows] = await dbPromise.query(
+                `SELECT * FROM bookings 
+                 WHERE room_id = ? 
+                 AND booking_date = ? 
+                 AND status IN ('pending', 'confirmed')
+                 AND (
+                     (start_time <= ? AND end_time > ?) OR
+                     (start_time < ? AND end_time >= ?) OR
+                     (start_time >= ? AND end_time <= ?)
+                 )`,
+                [roomId, date, startTime, startTime, endTime, endTime, startTime, endTime]
+            );
+            return rows;
+        } catch (error) {
+            console.error('Error in findConflicting:', error);
+            throw error;
+        }
     },
 
     async create(userId, roomId, date, startTime, endTime, type) {
@@ -60,33 +65,39 @@ const BookingModel = {
                 u.full_name as user_name,
                 u.email as user_email
             FROM bookings b
-            JOIN rooms r ON b.room_id = r.id
-            JOIN users u ON b.user_id = u.id
+            LEFT JOIN rooms r ON b.room_id = r.id
+            LEFT JOIN users u ON b.user_id = u.id
             ORDER BY b.booking_date DESC, b.start_time DESC`
         );
         return rows;
     },
 
     async findByUserId(userId) {
-        const [rows] = await dbPromise.query(
-            `SELECT 
-                b.id,
-                b.booking_date,
-                b.start_time,
-                b.end_time,
-                b.type,
-                b.status,
-                b.created_at,
-                r.name as room_name,
-                r.space,
-                r.capacity
-            FROM bookings b
-            JOIN rooms r ON b.room_id = r.id
-            WHERE b.user_id = ?
-            ORDER BY b.booking_date DESC, b.start_time DESC`,
-            [userId]
-        );
-        return rows;
+        try {
+            const [rows] = await dbPromise.query(
+                `SELECT 
+                    b.id,
+                    b.booking_date,
+                    b.start_time,
+                    b.end_time,
+                    b.type,
+                    b.status,
+                    b.cancellation_reason,
+                    b.created_at,
+                    r.name as room_name,
+                    r.space,
+                    r.capacity
+                FROM bookings b
+                LEFT JOIN rooms r ON b.room_id = r.id
+                WHERE b.user_id = ?
+                ORDER BY b.booking_date DESC, b.start_time DESC`,
+                [userId]
+            );
+            return rows;
+        } catch (error) {
+            console.error('Error in findByUserId:', error);
+            throw error;
+        }
     },
 
     async findUpcomingConfirmed(dateStr, timeStr, futureTimeStr) {

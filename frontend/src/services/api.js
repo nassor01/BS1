@@ -114,6 +114,22 @@ async function apiFetch(endpoint, options = {}, requiresAuth = false) {
         }
     }
 
+    // Handle working hours restriction
+    if (response.status === 403) {
+        try {
+            const errorData = await response.json();
+            if (errorData.code === 'OUTSIDE_WORKING_HOURS') {
+                clearAuth();
+                // Store the error message to show after redirect
+                sessionStorage.setItem('workingHoursError', errorData.error);
+                window.location.href = '/login';
+                return response;
+            }
+        } catch (error) {
+            // Continue if we can't parse error
+        }
+    }
+
     return response;
 }
 

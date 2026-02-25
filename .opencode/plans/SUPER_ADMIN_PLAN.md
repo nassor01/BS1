@@ -485,23 +485,37 @@ Block regular users from accessing the system outside of configured working hour
 - Added `isWithinWorkingHours()` method - returns boolean based on current time vs configured hours
 - Added `getWorkingHoursConfig()` method - returns config with message
 
-**New Middleware** (`backend/middleware/workingHours.js`)
-- Created `checkWorkingHours` middleware for route protection
+**Auth Middleware** (`backend/middleware/auth.js`)
+- Added working hours check in `authenticate` function
+- Runs on every authenticated API request
 
 **Auth Controller** (`backend/controllers/authController.js`)
-- Added working hours check in `login()` function (lines 146-158)
-- Added working hours check in `adminLogin()` function (lines 283-295)
+- Added working hours check in `login()` function
+- Added working hours check in `adminLogin()` function
 - Admins and super admins bypass working hours restrictions
 
 **Booking Controller** (`backend/controllers/bookingController.js`)
 - Added working hours check in `createBooking()` function
 - Returns 403 with `OUTSIDE_WORKING_HOURS` error code when blocked
 
+**Session Manager** (`backend/services/sessionManager.js`)
+- Added `getAllSessions()` method to expose all active sessions
+
+**Working Hours Cron** (`backend/cron/workingHoursCron.js`) - NEW
+- Runs every minute to check working hours
+- Automatically disconnects regular users when working hours end
+- Logs out users who are logged in outside working hours
+- Does NOT affect admins or super admins
+
 #### 11.2 Frontend Changes
+
+**API Service** (`frontend/src/services/api.js`)
+- Added handling for `OUTSIDE_WORKING_HOURS` error (403)
+- Automatically clears auth and redirects to login when triggered
 
 **Login Page** (`frontend/src/pages/Login.jsx`)
 - Added error handling for `OUTSIDE_WORKING_HOURS` error code
-- Shows user-friendly message when blocked
+- Shows user-friendly message when blocked (including auto-logout message)
 
 ### Error Response Format
 ```json
@@ -516,10 +530,10 @@ Block regular users from accessing the system outside of configured working hour
 ```
 
 ### Access Rules
-| User Role | Login Outside Hours | Book Outside Hours |
-|-----------|---------------------|-------------------|
-| super_admin | ✅ Always allowed | ✅ Always allowed |
-| admin | ✅ Always allowed | ✅ Always allowed |
+| User Role | Login Outside Hours | Book Outside Hours | Auto-Logout When Hours End |
+|-----------|---------------------|-------------------|---------------------------|
+| super_admin | ✅ Always allowed | ✅ Always allowed | ❌ Never |
+| admin | ✅ Always allowed | ✅ Always allowed | ❌ Never |
 | user | ❌ Blocked | ❌ Blocked |
 
 ---
