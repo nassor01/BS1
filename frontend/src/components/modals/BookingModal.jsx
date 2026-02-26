@@ -21,8 +21,8 @@ const BookingModal = ({ isOpen, onClose, room, type, onSuccess }) => {
     const dragModeRef = useRef(null);
     const calendarRef = useRef(null);
 
-    // Guard AFTER all hooks — React requires hooks to always run unconditionally
-    if (!isOpen || !room || !type) return null;
+    // FIX: Use conditional rendering at JSX level instead of early return
+    // This ensures all hooks always run in the same order on every render
 
     const formatDateISO = (date) => {
         const year = date.getFullYear();
@@ -258,6 +258,10 @@ const BookingModal = ({ isOpen, onClose, room, type, onSuccess }) => {
         return days;
     };
 
+    // FIX: Conditional rendering at JSX level instead of early return
+    // This ensures useEffect is ALWAYS called regardless of isOpen/room/type values
+    if (!isOpen) return null;
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div
@@ -270,7 +274,7 @@ const BookingModal = ({ isOpen, onClose, room, type, onSuccess }) => {
                     <div className="flex justify-between items-start mb-6">
                         <div>
                             <h2 className="text-2xl font-bold text-gray-900">
-                                {isReservation ? 'Reserve' : 'Book'} {room.name}
+                                {isReservation ? 'Reserve' : 'Book'} {room?.name || 'Room'}
                             </h2>
                             <p className="text-gray-500 mt-1">
                                 {isReservation

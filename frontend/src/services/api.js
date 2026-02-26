@@ -123,20 +123,17 @@ async function apiFetch(endpoint, options = {}, requiresAuth = false) {
     let response = await fetch(`${API_BASE_URL}${endpoint}`, config);
 
     if (response.status === 401 && requiresAuth) {
-        console.log('=== 401 Unauthorized detected ===');
         try {
             // Clone before reading to avoid "body already read" errors downstream
             const cloned = response.clone();
             const errorData = await cloned.json();
 
             if (errorData.code === 'TOKEN_EXPIRED') {
-                console.log('Token expired, attempting refresh...');
                 const newToken = await refreshAccessToken();
                 config.headers['Authorization'] = `Bearer ${newToken}`;
                 response = await fetch(`${API_BASE_URL}${endpoint}`, config);
             }
         } catch (error) {
-            console.error('Token refresh failed, redirecting to login:', error);
             clearAuth();
             window.location.href = '/login';
             throw error;
