@@ -2,7 +2,9 @@ const activeSessions = new Map();
 const invalidatedTokens = new Set();
 let io = null;
 
-const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+// Session timeout - should match JWT expiration (24 hours for users, 2h for admins)
+// Using 2 hours to match admin JWT expiration as the minimum
+const SESSION_TIMEOUT_MS = 2 * 60 * 60 * 1000;
 
 const sessionManager = {
     setSocketIO(socketIO) {

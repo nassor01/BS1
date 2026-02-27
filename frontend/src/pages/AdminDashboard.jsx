@@ -28,9 +28,8 @@ const AdminDashboard = () => {
             const roomsRes = await roomService.getRooms(today);
             const roomsData = await roomsRes.json();
             
-            // Show only available rooms - booked/reserved rooms should not appear in the list
-            const availableRooms = roomsData.filter(room => room.status === 'Available');
-            setRooms(availableRooms);
+            // Show all rooms in admin panel - regardless of booking status
+            setRooms(roomsData);
 
             // Fetch Admin Bookings
             const bookingsRes = await bookingService.getAdminBookings();

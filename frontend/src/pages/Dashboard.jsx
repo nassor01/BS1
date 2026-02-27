@@ -44,18 +44,26 @@ const Dashboard = () => {
             const userStr = localStorage.getItem('user');
             const user = userStr ? JSON.parse(userStr) : null;
 
-            const [roomsRes, bookingsRes] = await Promise.all([
-                roomService.getRooms(selectedDate),
-                user ? bookingService.getUserBookings(user.id) : Promise.resolve({ ok: false })
-            ]);
-
+            // Fetch rooms (public endpoint, no auth needed)
+            const roomsRes = await roomService.getRooms(selectedDate);
             if (!roomsRes.ok) throw new Error('Failed to fetch rooms');
             const roomsData = await roomsRes.json();
             setRooms(roomsData);
 
-            if (bookingsRes.ok) {
-                const bookingsData = await bookingsRes.json();
-                setUserBookings(bookingsData);
+            // Fetch user bookings (auth required) - handle 401 gracefully
+            if (user) {
+                try {
+                    const bookingsRes = await bookingService.getUserBookings(user.id);
+                    if (bookingsRes.ok) {
+                        const bookingsData = await bookingsRes.json();
+                        setUserBookings(bookingsData);
+                    }
+                    // If 401 or other error, silently skip updating user bookings
+                    // Don't fail the entire fetchData for this
+                } catch (bookingErr) {
+                    console.warn('Could not fetch user bookings:', bookingErr);
+                    // Silently fail - rooms are already loaded
+                }
             }
         } catch (err) {
             console.error('Error fetching data:', err);
@@ -118,11 +126,7 @@ const Dashboard = () => {
     };
 
     const handleBookingSuccess = (bookingType) => {
-        if (bookingType === 'reservation') {
-            setCurrentView('reserved');
-        } else {
-            setCurrentView('booked');
-        }
+        // Refresh data but stay on available view so user can continue booking/reserving
         fetchData();
     };
 
