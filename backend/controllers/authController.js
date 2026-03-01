@@ -145,21 +145,32 @@ const authController = {
 
             // Check working hours for regular users (admins and super admins have always-on access)
             if (user.role !== 'admin' && user.role !== 'super_admin') {
-                const config = await SettingsModel.getWorkingHoursConfig();
-                if (!config.withinHours) {
-                    return res.status(403).json({
-                        error: config.message,
-                        code: 'OUTSIDE_WORKING_HOURS',
-                        workingHours: {
-                            start: config.start,
-                            end: config.end
-                        }
-                    });
+                try {
+                    const config = await SettingsModel.getWorkingHoursConfig();
+                    if (!config.withinHours) {
+                        return res.status(403).json({
+                            error: config.message,
+                            code: 'OUTSIDE_WORKING_HOURS',
+                            workingHours: {
+                                start: config.start,
+                                end: config.end
+                            }
+                        });
+                    }
+                } catch (settingsError) {
+                    console.error('Working hours check failed:', settingsError.message);
+                    // Allow login if working hours check fails (fail open for accessibility)
                 }
             }
 
             // Check if user needs to verify with OTP after password reset (within 24 hours)
-            const hasRecentReset = await UserModel.hasRecentPasswordReset(user.id);
+            let hasRecentReset = false;
+            try {
+                hasRecentReset = await UserModel.hasRecentPasswordReset(user.id);
+            } catch (err) {
+                console.warn('Could not check password reset status:', err.message);
+            }
+            
             if (hasRecentReset && user.login_otp) {
                 const tempToken = generateTempToken(user);
                 console.log(`🔐 Password reset OTP required for user: ${user.email}`);
@@ -197,8 +208,12 @@ const authController = {
             
             // Clear the login OTP and password_reset_at after successful login
             if (hasRecentReset) {
-                await UserModel.clearLoginOtp(user.id);
-                await UserModel.clearPasswordResetTimestamp(user.id);
+                try {
+                    await UserModel.clearLoginOtp(user.id);
+                    await UserModel.clearPasswordResetTimestamp(user.id);
+                } catch (err) {
+                    console.warn('Could not clear login OTP:', err.message);
+                }
             }
 
             res.json({
@@ -217,8 +232,8 @@ const authController = {
             });
 
         } catch (error) {
-            console.error('Login error:', error);
-            res.status(500).json({ error: 'Login failed' });
+            console.error('Login error:', error.message);
+            res.status(500).json({ error: 'Login failed. Please try again later.' });
         }
     },
 
@@ -284,21 +299,32 @@ const authController = {
 
             // Check working hours for non-admin users (admins always have access)
             if (user.role !== 'admin' && user.role !== 'super_admin') {
-                const config = await SettingsModel.getWorkingHoursConfig();
-                if (!config.withinHours) {
-                    return res.status(403).json({
-                        error: config.message,
-                        code: 'OUTSIDE_WORKING_HOURS',
-                        workingHours: {
-                            start: config.start,
-                            end: config.end
-                        }
-                    });
+                try {
+                    const config = await SettingsModel.getWorkingHoursConfig();
+                    if (!config.withinHours) {
+                        return res.status(403).json({
+                            error: config.message,
+                            code: 'OUTSIDE_WORKING_HOURS',
+                            workingHours: {
+                                start: config.start,
+                                end: config.end
+                            }
+                        });
+                    }
+                } catch (settingsError) {
+                    console.error('Working hours check failed:', settingsError.message);
+                    // Allow login if working hours check fails
                 }
             }
 
             // Check if user needs to verify with OTP after password reset (within 24 hours)
-            const hasRecentReset = await UserModel.hasRecentPasswordReset(user.id);
+            let hasRecentReset = false;
+            try {
+                hasRecentReset = await UserModel.hasRecentPasswordReset(user.id);
+            } catch (err) {
+                console.warn('Could not check password reset status:', err.message);
+            }
+            
             if (hasRecentReset && user.login_otp) {
                 const tempToken = generateTempToken(user);
                 console.log(`🔐 Password reset OTP required for admin: ${user.email}`);
@@ -336,8 +362,12 @@ const authController = {
             
             // Clear the login OTP and password_reset_at after successful login
             if (hasRecentReset) {
-                await UserModel.clearLoginOtp(user.id);
-                await UserModel.clearPasswordResetTimestamp(user.id);
+                try {
+                    await UserModel.clearLoginOtp(user.id);
+                    await UserModel.clearPasswordResetTimestamp(user.id);
+                } catch (err) {
+                    console.warn('Could not clear login OTP:', err.message);
+                }
             }
 
             res.json({
@@ -356,7 +386,10 @@ const authController = {
             });
 
         } catch (error) {
-            console.error('Admin login error:', error);
+            console.error('Admin login error:', error.message);
+            res.status(500).json({ error: 'Admin login failed. Please try again later.' });
+        }
+    },
             res.status(500).json({ error: 'Admin login failed' });
         }
     },

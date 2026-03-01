@@ -21,6 +21,24 @@ const BookingModal = ({ isOpen, onClose, room, type, onSuccess }) => {
     const dragModeRef = useRef(null);
     const calendarRef = useRef(null);
 
+    // Reset modal state when opening
+    useEffect(() => {
+        if (isOpen) {
+            setFormData({
+                date: new Date().toLocaleDateString('en-CA'),
+                startTime: '',
+                endTime: '',
+            });
+            setSelectedDates([]);
+            setCurrentMonth(new Date());
+            setLoading(false);
+            setError('');
+            setSuccess(false);
+            setProgress('');
+            setQueueInfo(null);
+        }
+    }, [isOpen]);
+
     // FIX: Use conditional rendering at JSX level instead of early return
     // This ensures all hooks always run in the same order on every render
 
@@ -183,7 +201,7 @@ const BookingModal = ({ isOpen, onClose, room, type, onSuccess }) => {
                 setTimeout(() => {
                     onClose();
                     if (onSuccess) onSuccess(type);
-                }, 3000);
+                }, 1500);
             } else {
                 setProgress('');
                 const errorMsg = data.error || data.details || data.message || 'Booking failed';

@@ -123,26 +123,9 @@ async function apiFetch(endpoint, options = {}, requiresAuth = false) {
     let response = await fetch(`${API_BASE_URL}${endpoint}`, config);
 
     if (response.status === 401 && requiresAuth) {
-        try {
-            // Clone before reading to avoid "body already read" errors downstream
-            const cloned = response.clone();
-            const errorData = await cloned.json();
-
-            if (errorData.code === 'TOKEN_EXPIRED') {
-                const newToken = await refreshAccessToken();
-                config.headers['Authorization'] = `Bearer ${newToken}`;
-                response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-            } else if (errorData.code === 'SESSION_TERMINATED' || errorData.code === 'TOKEN_INVALIDATED') {
-                // User was disconnected by admin - redirect to login
-                clearAuth();
-                window.location.href = '/login';
-                return response;
-            }
-        } catch (error) {
-            clearAuth();
-            window.location.href = '/login';
-            throw error;
-        }
+        // Don't auto-redirect to login - let the caller handle it
+        // This prevents infinite loops and unexpected redirects
+        return response;
     }
 
     // Handle working hours restriction.
@@ -151,6 +134,7 @@ async function apiFetch(endpoint, options = {}, requiresAuth = false) {
         try {
             const cloned = response.clone();
             const errorData = await cloned.json();
+            // Only redirect for working hours restriction, let caller handle other 403s
             if (errorData.code === 'OUTSIDE_WORKING_HOURS') {
                 clearAuth();
                 sessionStorage.setItem('workingHoursError', errorData.error);

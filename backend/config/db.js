@@ -13,17 +13,32 @@ const db = mysql.createPool({
     database: process.env.DB_NAME,
     waitForConnections: true,
     connectionLimit: DB_CONNECTION_LIMIT,
-    queueLimit: 0
+    queueLimit: 0,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 0
 });
 
 const dbPromise = db.promise();
 
+// Test connection on startup
 db.getConnection((err, connection) => {
     if (err) {
         console.error('❌ Database connection failed:', err.message);
+        console.error('   Please ensure:');
+        console.error('   1. MySQL server is running');
+        console.error('   2. Database "' + process.env.DB_NAME + '" exists');
+        console.error('   3. Credentials in .env are correct');
     } else {
         console.log(`✅ Database connected (Pool: ${DB_CONNECTION_LIMIT})`);
         connection.release();
+    }
+});
+
+// Handle connection errors after startup
+db.on('error', (err) => {
+    console.error('❌ Database pool error:', err.message);
+    if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+        console.error('   Database connection was lost. Attempting to reconnect...');
     }
 });
 

@@ -47,23 +47,33 @@ const SettingsModel = {
     },
 
     async getWorkingHours() {
-        const [rows] = await dbPromise.query(
-            'SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ("working_hours_start", "working_hours_end")'
-        );
-        
-        const result = { start: '08:00', end: '18:00' };
-        rows.forEach(row => {
-            if (row.setting_key === 'working_hours_start') result.start = row.setting_value;
-            if (row.setting_key === 'working_hours_end') result.end = row.setting_value;
-        });
-        return result;
+        try {
+            const [rows] = await dbPromise.query(
+                'SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ("working_hours_start", "working_hours_end")'
+            );
+            
+            const result = { start: '08:00', end: '18:00' };
+            rows.forEach(row => {
+                if (row.setting_key === 'working_hours_start') result.start = row.setting_value || '08:00';
+                if (row.setting_key === 'working_hours_end') result.end = row.setting_value || '18:00';
+            });
+            return result;
+        } catch (error) {
+            console.warn('Could not fetch working hours from database, using defaults:', error.message);
+            return { start: '08:00', end: '18:00' };
+        }
     },
 
     async isMaintenanceMode() {
-        const [rows] = await dbPromise.query(
-            'SELECT setting_value FROM system_settings WHERE setting_key = "maintenance_mode"'
-        );
-        return rows.length > 0 && rows[0].setting_value === 'true';
+        try {
+            const [rows] = await dbPromise.query(
+                'SELECT setting_value FROM system_settings WHERE setting_key = "maintenance_mode"'
+            );
+            return rows.length > 0 && rows[0].setting_value === 'true';
+        } catch (error) {
+            console.warn('Could not check maintenance mode:', error.message);
+            return false;
+        }
     },
 
     async isWithinWorkingHours() {

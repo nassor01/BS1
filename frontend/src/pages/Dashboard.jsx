@@ -39,35 +39,35 @@ const Dashboard = () => {
 
     const fetchData = useCallback(async () => {
         setLoading(true);
-        setError('');
+        
         try {
             const userStr = localStorage.getItem('user');
             const user = userStr ? JSON.parse(userStr) : null;
 
-            // Fetch rooms (public endpoint, no auth needed)
+            // Always fetch rooms (public endpoint)
             const roomsRes = await roomService.getRooms(selectedDate);
-            if (!roomsRes.ok) throw new Error('Failed to fetch rooms');
-            const roomsData = await roomsRes.json();
-            setRooms(roomsData);
+            if (roomsRes.ok) {
+                const roomsData = await roomsRes.json();
+                setRooms(roomsData);
+            }
 
-            // Fetch user bookings (auth required) - handle 401 gracefully
+            // Try to fetch user bookings if user exists
+            // Skip if no valid auth (401 responses are handled gracefully)
             if (user) {
                 try {
                     const bookingsRes = await bookingService.getUserBookings(user.id);
-                    if (bookingsRes.ok) {
+                    // Only update bookings on successful response
+                    if (bookingsRes.status === 200) {
                         const bookingsData = await bookingsRes.json();
                         setUserBookings(bookingsData);
                     }
-                    // If 401 or other error, silently skip updating user bookings
-                    // Don't fail the entire fetchData for this
-                } catch (bookingErr) {
-                    console.warn('Could not fetch user bookings:', bookingErr);
-                    // Silently fail - rooms are already loaded
+                    // Silently ignore 401/other errors - don't break the UI
+                } catch (e) {
+                    // Ignore network/other errors
                 }
             }
         } catch (err) {
             console.error('Error fetching data:', err);
-            setError('Could not load data. Please check your connection.');
         } finally {
             setLoading(false);
         }
@@ -126,8 +126,21 @@ const Dashboard = () => {
     };
 
     const handleBookingSuccess = (bookingType) => {
-        // Refresh data but stay on available view so user can continue booking/reserving
-        fetchData();
+        // Navigate to the appropriate view based on booking type
+        if (bookingType === 'reservation') {
+            setCurrentView('reserved');
+        } else {
+            setCurrentView('booked');
+        }
+        
+        // Refresh data with a small delay
+        setTimeout(() => {
+            try {
+                fetchData();
+            } catch (e) {
+                console.error('Error in handleBookingSuccess:', e);
+            }
+        }, 100);
     };
 
     const openCancelModal = (booking) => {
@@ -144,7 +157,6 @@ const Dashboard = () => {
 
     const handleCancelBooking = async () => {
         if (!selectedBooking) {
-            console.error('No booking selected for cancellation');
             setCancelError('System error: No booking selected');
             return;
         }
@@ -153,20 +165,36 @@ const Dashboard = () => {
             setCancelError('Please provide a cancellation reason');
             return;
         }
-
+        
         setCancelLoading(true);
         setCancelError('');
 
         try {
             const response = await bookingService.cancelBooking(selectedBooking.id, cancelReason);
 
+            if (response.status === 401) {
+                setCancelError('Session expired. Please login again.');
+                setCancelLoading(false);
+                return;
+            }
+
             if (response.ok) {
                 setCancelSuccess('Booking cancelled successfully');
+                
+                // Show success briefly, then close and refresh
                 setTimeout(() => {
                     setIsCancelModalOpen(false);
                     setSelectedBooking(null);
-                    fetchData();
-                }, 1500);
+                    
+                    // Refresh rooms to show updated availability
+                    roomService.getRooms(selectedDate).then(roomsRes => {
+                        if (roomsRes.ok) {
+                            roomsRes.json().then(roomsData => {
+                                setRooms(roomsData);
+                            });
+                        }
+                    });
+                }, 1000);
             } else {
                 const errorText = await response.text();
                 let data;
@@ -263,7 +291,7 @@ const Dashboard = () => {
                                                 onChange={(e) => setCancelReason(e.target.value)}
                                                 maxLength={500}
                                             />
-                                            <p className="text-xs text-gray-400 mt-1">{cancelReason.length}/500 characters</p>
+                                            <p className="text-xs text-gray-400 mt-1">{cancelReason?.length || 0}/500 characters</p>
                                         </div>
 
                                         {cancelError && (
